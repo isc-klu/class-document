@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { ClassDocument } from '../src/structure.js';
+import { Document } from '../src/index.js';
 
 class Section {
     title: string;
@@ -58,11 +58,16 @@ for (const file of fs.readdirSync(`./test/resource`)) {
     const suite = new Suite(fileString.toString());
 
     for (const sec of suite.content) {
+        if (sec.error) {
+            continue
+        }
         try {
-            const _ = new ClassDocument(sec.objectscript);
+            const doc = new Document(sec.objectscript);
             console.assert(!sec.error, `FAILED: ${sec.title}`);
+            const roundtrip = doc.toString();
+            console.assert(roundtrip === sec.objectscript, `FAILED: ${sec.title}\n\tSource is not preserved:\n${roundtrip}`)
         } catch (e) {
-            console.assert(sec.error, `FAILED: ${sec.title}`);
+            console.assert(sec.error, `FAILED: ${sec.title}\n\tunexpected error ${e}`);
         }
     }
 }

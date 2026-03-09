@@ -1,0 +1,4 @@
+source_file ::= [import_or_include_code]* class_definition
+import_or_include_code ::= import_code | include_code
+import_code ::= /import/i name
+include_code ::= /include/i name
