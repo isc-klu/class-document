@@ -1,5 +1,4 @@
-import { read } from "node:fs";
-import type { Location } from "./syntax.js";
+import { AlPhA, alt2, altN, butNL, char, chars, cons, isChar, isSpace, join, literal, LiTeRaL, map, oneOrMore, Reader, sepList, seq2, seq3, seq4, seq5, seq6, seq7, seq9, seqN, space, succ, take1, zeroOrMore, type Parser } from "./langspec.js";
 
 export class Dependency {
     keyword: string;
@@ -17,54 +16,20 @@ export class Dependency {
 }
 
 export class Extends {
+    gapBefore: string
     keyword: string
-    gap: string
+    gapKeywordParents: string
     parents: string | string[]
 
-    constructor(keyword: string, gap: string, parents: string | string[]) {
+    constructor(gapBefore: string, keyword: string, gap: string, parents: string | string[]) {
+        this.gapBefore = gapBefore
         this.keyword = keyword
-        this.gap = gap
+        this.gapKeywordParents = gap
         this.parents = parents
     }
 
     public toString(): string {
-        return this.keyword + this.gap + (typeof this.parents === "string" ? this.parents : '(' + this.parents.join(',') + ')')
-    }
-}
-
-class Reader {
-    source: string;
-    private pos: Location;
-    constructor(source: string) {
-        this.source = source;
-        this.pos = {
-            line: 0,
-            char: 0,
-            absolute: 0,
-        }
-    }
-    public peak(n: number = 1) {
-        return this.source.slice(this.pos.absolute, this.pos.absolute + n);
-    }
-    public location(): Location {
-        return Object.assign({}, this.pos);
-    }
-    public advance(n: number = 1) {
-        for (; n > 0; n--) {
-            if (this.peak() === "\n") {
-                this.pos.line += 1;
-                this.pos.char = 0;
-            } else {
-                this.pos.char += 1;
-            }
-            this.pos.absolute += 1;
-        }
-    }
-    public i() {
-        return this.pos.absolute;
-    }
-    public expecting(concept: string): Error {
-        return new Error(`Expecting ${concept} at ` + JSON.stringify(this.pos) + ', found "' + this.source.slice(this.i(), this.i() + 20) + '..."')
+        return this.gapBefore + this.keyword + this.gapKeywordParents + (typeof this.parents === "string" ? this.parents : '(' + this.parents.join(',') + ')')
     }
 }
 
@@ -132,280 +97,147 @@ export class XDataLikeMember extends Member{
 }
 
 export class Document {
+    gapBeforeDeps: string;
     dependencies: (Dependency | string)[]
+    gapDepsDesc: string;
     description: Description;
+    gapDescKeyword: string;
     keyword: string;
     gapKeywordName: string;
     name: string;
-    gapNameExtends: string;
     extends: null | Extends
-    gapExtendsKeywords: string;
-    keywords: null | string[];
-    gapKeywordsBegin: string;
+    // keywords: null | string[];
+    // gapKeywordsBegin: string;
+    // members: (Member | string)[];
     content: string;
-    members: (Member | string)[];
-    constructor(source: string) {
-        const reader = new Reader(source);
-        this.dependencies = parseDependencies(reader);
-        this.description = parseDescription(reader);
-        this.keyword = parseClassKeyword(reader);
-        this.gapKeywordName = parseProperGap(reader);
-        this.name = parseName(reader);
-        this.gapNameExtends = parseProperGap(reader);
-        this.extends = parseExtends(reader);
-        this.gapExtendsKeywords = parseWhitespace(reader);
-        this.keywords = parseBracketList(reader);
-        this.gapKeywordsBegin = parseWhitespace(reader);
-        parseBegin(reader);
-        this.members = parseMembers(reader);
-        this.content = reader.source.slice(reader.i());
+    
+    constructor(
+        gapBeforeDeps: string,
+        dependencies: (Dependency | string)[],
+        gapDepsDesc: string,
+        description: Description,
+        gapDescKeyword: string,
+        keyword: string,
+        gapKeywordName: string,
+        name: string,
+        ext: null | Extends,
+        // keywords: null | string[],
+        // gapKeywordsBegin: string,
+        // members: (Member | string)[],
+        content: string
+    ) {
+        this.gapBeforeDeps = gapBeforeDeps;
+        this.dependencies = dependencies;
+        this.gapDepsDesc = gapDepsDesc;
+        this.description = description;
+        this.gapDescKeyword = gapDescKeyword;
+        this.keyword = keyword;
+        this.gapKeywordName = gapKeywordName;
+        this.name = name;
+        this.extends = ext;
+        // this.gapExtendsKeywords = gapExtendsKeywords;
+        // this.keywords = keywords;
+        // this.gapKeywordsBegin = gapKeywordsBegin;
+        // this.members = members;
+        this.content = content;
     }
 
     public toString(): string {
-        return (this.dependencies.map((x) => x.toString()).join("") +
+        // console.log("The dependencies are:", JSON.stringify(this.dependencies))
+        return (
+            this.gapBeforeDeps +
+            this.dependencies.map((x) => x.toString()).join("") +
+            this.gapDepsDesc +
             this.description.toString() +
-            this.keyword + this.gapKeywordName +
-            this.name + this.gapNameExtends +
-            (this.extends === null ? "" : this.extends.toString()) + this.gapExtendsKeywords +
-            (this.keywords === null ? "" : '[' + this.keywords.join(',') + ']') + this.gapKeywordsBegin +
-            "{" +
-            this.members.map((x) => x.toString()).join("") +
-            "aftermembers" + 
+            this.gapDescKeyword +
+            this.keyword + 
+            this.gapKeywordName +
+            this.name + 
+            (this.extends === null ? "" : this.extends.toString()) +
+            // this.gapExtendsKeywords +
+            // (this.keywords === null ? "" : '[' + this.keywords.join(',') + ']') + this.gapKeywordsBegin +
+            // "{" +
+            // this.members.map((x) => x.toString()).join("") +
+            // "aftermembers" + 
             this.content);
     }
 }
 
-function parseMembers(reader: Reader): (Member | string)[] {
-    const output: (Member | string)[] = []
-    while (true) {
-        output.push(parseWhitespace(reader))
-        const result = parseMember(reader)
-        if (result === null) {
-            return output
-        }
-        output.push(result)
-    }
-}
+const maybeGap = map(zeroOrMore(space), join);
+const strictGap = map(oneOrMore(space), join);
+const dependency = map(
+    seq3(
+        altN(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator")),
+        strictGap,
+        map(oneOrMore(butNL), join),
+    ),
+    (parts) => new Dependency(...parts)
+);
+const dependencies = zeroOrMore(dependency);
+const descriptionLine = map(
+    seq3(literal("///"), map(oneOrMore(butNL), join),
+    literal("\n")), ([_slashes, comment, _nl]) => comment
+);
+const description = map(
+    zeroOrMore(descriptionLine),
+    (parts) => new Description(parts),
+)
 
-function parseMember(reader: Reader): Member | null {
-    const keyword = firstKeyword(reader)
-    if (keyword === null) {
-        return null
-    }
-    switch (keyword.toLowerCase()) {
-        case "parameter":
-        case "property":
-        case "projection":
-        case "index":
-        case "foreignkey": {
-            const gapKeywordName = parseProperGap(reader);
-            const name = parseName(reader);
-            const gapNameContent = parseWhitespace(reader);
-            const content = parsePropertyLikeMember(reader)
-            return new PropertyLikeMember(keyword, gapKeywordName, name, gapNameContent, content)
-        }
-        case "method":
-        case "classmethod":
-        case "trigger":
-        case "query":
-            return null;
-        case "xdata":
-        case "storage":{
-            const gapKeywordName = parseProperGap(reader);
-            const name = parseName(reader);
-            const gapNameKeywords = parseWhitespace(reader);
-            const keywords = parseBracketList(reader);
-            const gapKeywordsBegin = parseWhitespace(reader);
-            parseBegin(reader);
-            const content = parseXDataLikeMember(reader);
-            return new XDataLikeMember(keyword, gapKeywordName, name, gapNameKeywords, keywords, gapKeywordsBegin, content)
-        }
-        default:
-            throw new Error(`Unexpected keyword "${keyword}" at ` + JSON.stringify(reader.location()))
-    }
-}
+const name = map(oneOrMore(altN(AlPhA, literal("%"), literal("."))), join);
 
-function parsePropertyLikeMember(reader: Reader): string {
-    const regex = /[^;]*/yi;
-    regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source) as [ string ];
-    const [full] = maybeMatch
-    reader.advance(full.length);
-    return full;
-}
+const parentList = map(
+    seq3(
+        literal("("),
+        map(
+            sepList(map(seqN(maybeGap, name, maybeGap), join), literal(",")),
+            ([parents, _gaps]) => parents
+        ),
+        literal(")"),
+    ),
+    ([_1, parents, _2]) => parents
+)
 
-function parseXDataLikeMember(reader: Reader): string {
-    const regex = /(.*?)\n}/ys;
-    regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source) as [ string ];
-    if (maybeMatch === null) {
-        throw reader.expecting("XData followed by a stand-alone '}'")
+const ext = map(
+    seq4(
+        strictGap,
+        LiTeRaL("extends"),
+        strictGap,
+        alt2(name, parentList),
+    ),
+    (parts) => new Extends(...parts)
+)
+
+const document = map(
+    seq6(
+        // before the class keyword
+        seq5(
+            maybeGap,
+            dependencies,
+            maybeGap,
+            description,
+            maybeGap,
+        ),
+        // before "{"
+        LiTeRaL("class"),
+        strictGap,
+        name,
+        alt2(ext, succ(null)),
+        chars(isChar),
+    ),
+    ([beforeClass, ...parts]) => {
+        return new Document(
+            ...beforeClass,
+            ...parts
+        )
     }
-    let [full] = maybeMatch
-    full = full.slice(0, full.length-2)
-    reader.advance(full.length);
-    // console.log(JSON.stringify(full))
-    return full;
-}
+)
 
-function firstKeyword(reader: Reader): string | null {
-    const regex = /[a-z]+/yi;
-    regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source);
-    if (maybeMatch === null) {
-        return null
-    }
-    const [full] = maybeMatch
-    reader.advance(full.length);
-    return full;
-}
-
-function parseExtendsKeyword(reader: Reader): null | string {
-    const regex = /Extends/yi;
-    regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source);
-    if (maybeMatch === null) {
-        return null
-    }
-    const [full] = maybeMatch
-    reader.advance(full.length);
-    return full;
-}
-
-function parseBracketList(reader: Reader): null | string[] {
-    if (reader.peak() === "[") {
-        parsePrefix("[", reader)
-        const regex = /[^\]]*/y;
-        regex.lastIndex = reader.i();
-        const [full] = regex.exec(reader.source) as [string];
-        const list = full.split(",")
-        reader.advance(full.length)
-        parsePrefix("]", reader)
-        return list
+export const parseDocument = (input: string): Document => {
+    const reader = new Reader(input);
+    const doc = take1(document(reader))
+    if (doc === null) {
+        throw new Error(`Can't parse document`);
     } else {
-        return null
+        return doc.value;
     }
-}
-
-function parseList(reader: Reader): string[] {
-    const regex = /[^)]*/y;
-    regex.lastIndex = reader.i();
-    const [full] = regex.exec(reader.source) as [string];
-    reader.advance(full.length)
-    return full.split(",")
-}
-
-function parseExtends(reader: Reader): null | Extends {
-    const keyword = parseExtendsKeyword(reader)
-    if (keyword === null) {
-        return null
-    }
-    const pad = parseWhitespace(reader)
-    if (reader.peak() === "(") {
-        parsePrefix("(", reader);
-        const parents = parseList(reader)
-        parsePrefix(")", reader);
-        return new Extends(keyword, pad, parents)
-    } else {
-        const parent = parseName(reader)
-        return new Extends(keyword, pad, parent)
-    }
-}
-
-function parsePrefix(prefix: string, reader: Reader): void {
-    if (reader.peak(prefix.length) !== prefix) {
-        throw reader.expecting(prefix)
-    }
-    reader.advance(prefix.length)
-}
-
-
-function parseBegin(reader: Reader): void {
-    return parsePrefix("{", reader)
-}
-
-function parseEnd(reader: Reader): void {
-    return parsePrefix("}", reader)
-}
-
-function parseDescription(reader: Reader): Description {
-    const regex = /(\/\/\/[^\n]*\n)*/yi;
-    regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source) as [string];
-    const [full] = maybeMatch
-    reader.advance(full.length);
-    const lines = full.split('\n')
-    console.assert(lines.pop() === "", "The last description line must be empty because we matched \\n-ending lines.")
-    return new Description(lines.map((line) => line.slice(3,)))
-}
-
-function parseName(reader: Reader): string {
-    const regex = /[^\s]+/yi;
-    regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source);
-    if (maybeMatch === null) {
-        throw new Error(`Can't find a name at ` + JSON.stringify(reader.location()))
-    }
-    const [full] = maybeMatch
-    reader.advance(full.length);
-    return full;
-}
-
-function parseClassKeyword(reader: Reader): string {
-    const regex = /class/yi;
-    regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source);
-    if (maybeMatch === null) {
-        throw new Error(`Can't find class keyword at ` + JSON.stringify(reader.location()))
-    }
-    const [full] = maybeMatch
-    reader.advance(full.length);
-    return full;
-}
-
-
-function parseProperGap(reader: Reader): string {
-    const regex = /\s+/y;
-    regex.lastIndex = reader.i();
-    const execResult = regex.exec(reader.source);
-    if (execResult === null) {
-        throw reader.expecting("a proper gap")
-    }
-    const [full] = execResult;
-    reader.advance(full.length);
-    return full;
-}
-
-function parseWhitespace(reader: Reader): string {
-    const regex = /\s*/y;
-    regex.lastIndex = reader.i();
-    const [content] = regex.exec(reader.source) as [string];
-    reader.advance(content.length);
-    return content;
-}
-
-function parseDependency(reader: Reader): Dependency | null {
-    const regex = /(import|include|includegenerator)(\s+)([^\n]+)/yi;
-    regex.lastIndex = reader.i();
-    const result = regex.exec(reader.source);
-    if (result === null) {
-        return result;
-    } else {
-        const [match, keyword, space, content] = result;
-        reader.advance(match.length);
-        return new Dependency(keyword as string, space as string, content as string)
-    }
-}
-
-function parseDependencies(reader: Reader): (Dependency | string)[] {
-    const output: (Dependency | string)[] = [];
-    while (true) {
-        output.push(parseWhitespace(reader))
-        const maybeDep = parseDependency(reader);
-        if (maybeDep === null) {
-            break;
-        }
-        output.push(maybeDep)
-    }
-    return output;
 }

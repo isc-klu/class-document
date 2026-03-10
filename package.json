@@ -10,7 +10,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "node test/index.js"
+    "test": "node test/index.js",
+    "watch": "npx tsc --watch"
   },
   "devDependencies": {
     "@types/node": "^25.3.5",
