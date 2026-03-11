@@ -48,9 +48,9 @@ export class Extends {
 
 export class Keywords {
     gapBefore: string;
-    keywords: string[];
+    keywords: [string, string, string][];
 
-    constructor(gapBefore: string, keywords: string[]) {
+    constructor(gapBefore: string, keywords: [string, string, string][]) {
         this.gapBefore = gapBefore;
         this.keywords = keywords;
     }
@@ -59,7 +59,7 @@ export class Keywords {
         return (
             this.gapBefore +
             '[' +
-            this.keywords.join(',') +
+            this.keywords.map(([s1, k, s2]) => s1 + k + s2).join(',') +
             ']'
         );
     }

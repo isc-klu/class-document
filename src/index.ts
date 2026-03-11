@@ -70,15 +70,15 @@ const keyword =
         flatten(seq(name, optional(keywordValue, ""))),
         flatten(seq(LiTeRaL("Not"), space1, name))
     )
+const keywordWithPad = seq(space, keyword, space);
 const keywords = map(
     seq(
         space,
-        drop13(
-            seq(
+        seqDrop13(
                 literal("["),
-                drop2(repeatSep(map(seq(space, keyword, space), join), literal(","))),
+                drop2(repeatSep(keywordWithPad, literal(","))),
                 literal("]")
-            ))
+        )
     ),
     (parts) => new Keywords(...parts)
 )
