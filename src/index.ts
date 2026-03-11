@@ -17,19 +17,18 @@ const lCommentHead = altN(
 const lCommentContent = chars(isButNL);
 const lComment = flatten(seqN(lCommentHead, lCommentContent, literal("\n")))
 
-const gapUnit = once(altN(
+const spaceUnit = once(altN(
     readWhile1(isSpace),
     lComment,
     rComment,
 ));
-const space = flatten(repeat(gapUnit));
-const space1 = flatten(repeat1(gapUnit));
+const space = flatten(repeat(spaceUnit));
+const space1 = flatten(repeat1(spaceUnit));
+
+
+const dependencyKeyword = altN(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator"));
 const dependency = map(
-    seq3(
-        altN(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator")),
-        space1,
-        readWhile1(isButNL),
-    ),
+    seq3(dependencyKeyword, space1, readWhile1(isButNL)),
     (parts) => new Dependency(...parts)
 );
 const dependencies = repeat(dependency);
@@ -230,7 +229,7 @@ const methodLikeMember = map(
 const member = altN<Member>(propertyLikeMember, foreignkeyLikeMember, xdataLikeMember, triggerLikeMember, methodLikeMember)
 const members = repeatSep(space, member)
 
-const documentBlock: Parser<[string[], (string | Member)[]]>= map(
+const documentBlock: Parser<[string[], (string | Member)[]]> = map(
     seq3(
         literal("{"),
         members,
