@@ -1,10 +1,6 @@
 import { map } from "./index.js";
-import { succ } from "./core.js";
+import { seq2, succ } from "./core.js";
 import { type Parser } from "./core.js";
-
-function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
-    return p1.bind((x) => p2.bind((y) => succ([x, y])))
-}
 
 export function seq<T>(): Parser<T[]>;
 

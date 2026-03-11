@@ -104,4 +104,7 @@ export const fail: Parser<never> = withReader((_) => [].values());
 export const eof = <T>(value: T) => withReader((reader) => (reader.atEnd() ? [{ reader, value }] : []).values());
 export const strN = (n: number = 1) => withReader((reader) => reader.read(n));
 export const strWhile = (p: (x: string) => boolean = (_) => true) => withReader((reader) => reader.readWhile(p));
+export function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
+    return p1.bind((x) => p2.bind((y) => succ([x, y])));
+}
 
