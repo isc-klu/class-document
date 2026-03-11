@@ -4,7 +4,7 @@ export function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
     function* g(reader: Reader) {
         yield* p1(reader);
         yield* p2(reader);
-        return null;
+        return;
     }
     return g;
 }

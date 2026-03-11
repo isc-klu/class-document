@@ -1,18 +1,7 @@
-import { type Parser, map, cons, succ, Reader, type Result } from "./langspec.js";
+import { type Parser, map, succ, Reader, type Result, bind } from "./langspec.js";
 
 function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
-    function* g(reader: Reader): Generator<Result<[T1, T2]>> {
-        for (const o1 of p1(reader)) {
-            for (const o2 of p2(o1.reader)) {
-                yield {
-                    reader: o2.reader,
-                    value: [o1.value, o2.value]
-                };
-            }
-        }
-        return;
-    }
-    return g;
+    return bind(p1, (x) => bind(p2, (y) => succ([x, y])))
 }
 
 export function seq<T>(): Parser<T[]>;
@@ -94,5 +83,5 @@ export function seq<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14,
 export function seq<T>(...ps: Parser<T>[]): Parser<T[]>;
 
 export function seq<T>(...ps: Parser<T>[]): Parser<T[]> {
-    return ps.reduceRight((acc, p) => map(seq2(p, acc), cons), succ([] as T[]));
+    return ps.reduce((acc, p) => map(seq2(acc, p), ([xs, x]) => [...xs, x]), succ([] as T[]));
 }

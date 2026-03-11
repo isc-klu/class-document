@@ -24,7 +24,7 @@ export class Reader {
         let { line, char, absolute } = this.srcloc;
         absolute += n;
         if (absolute > this.content.length) {
-            return null
+            return
         }
         for (; n > 0; n--) {
             if (this.content[absolute] === "\n") {
@@ -34,7 +34,7 @@ export class Reader {
                 char += 1;
             }
         }
-        yield { 
+        yield {
             reader: new Reader(this.content, { line, char, absolute }),
             value: this.content.slice(this.srcloc.absolute, absolute)
         };
@@ -42,8 +42,8 @@ export class Reader {
 
     public * readWhile(f: (_: string) => boolean): ResultSet<string> {
         let { line, char, absolute } = this.srcloc;
-        for (; absolute < this.content.length; absolute ++) {
-            if (! f(this.content[absolute]!)) {
+        for (; absolute < this.content.length; absolute++) {
+            if (!f(this.content[absolute]!)) {
                 break
             }
             if (this.content[absolute] === "\n") {
@@ -53,7 +53,7 @@ export class Reader {
                 char += 1;
             }
         }
-        yield { 
+        yield {
             reader: new Reader(this.content, { line, char, absolute }),
             value: this.content.slice(this.srcloc.absolute, absolute)
         };
@@ -69,48 +69,35 @@ export interface Result<T> {
     value: T,
 }
 
-export type ResultSet<T> = Generator<Result<T>>;
+export type ResultSet<T> = IteratorObject<Result<T>, void>;
 
 export type Parser<T> = (reader: Reader) => ResultSet<T>
 
-export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
-    function* g(reader: Reader) {
-        yield* p(reader).map(({ reader, value }) => ({ reader, value: f(value) }))
-    }
-    return g;
-}
-
-export function bind<X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>): Parser<Y> {
+export function withReader<T>(f: (_: Reader) => ResultSet<T>): Parser<T> {
     return function* (reader: Reader) {
-        for (const r1 of p(reader)) {
-            yield *f(r1.value)(r1.reader)
-        }        
+        yield* f(reader)
     }
 }
 
-export function succ<T>(value: T): Parser<T> {
-    function* g(reader: Reader) {
-        yield { reader, value }
-    };
-    return g
-}
+export const succ = <T>(value: T) =>
+    withReader((reader) => [{ reader, value}].values())
+export const fail: Parser<never> =
+    withReader((_) => [].values())
+export const eof = <T>(value: T) =>
+    withReader((reader) => (reader.atEnd() ? succ(value) : fail)(reader))
+export const read = (n: number = 1) =>
+    withReader((reader) => reader.read(n))
+export const readWhile = (p: (x: string) => boolean = (_) => true) =>
+    withReader((reader) => reader.readWhile(p))
+export const bind = <X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>) =>
+    withReader((reader) => p(reader).flatMap(({ reader, value }) => f(value)(reader)))
 
-export function* fail<T>(_: Reader): ResultSet<T> { return null; };
+export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
+    return bind(p, (x) => succ(f(x)))
+}
 
 export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
-    return bind(p, (x) => f(x) ? succ(x) : fail<T>)
-}
-
-export function read(n: number = 1) {
-    return function* (reader: Reader): Generator<Result<string>> {
-        yield* reader.read(n)
-    }
-}
-
-export function readWhile(p: (x: string) => boolean = (_) => true): Parser<string> {
-    return function* (reader: Reader) {
-        yield* reader.readWhile(p)
-    }
+    return bind(p, (x) => f(x) ? succ(x) : fail)
 }
 
 export function readIf(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
@@ -133,33 +120,14 @@ export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
     return (x) => lazyP()(x)
 }
 
-export const cons = <T>([x, xs]: [T, T[]]) => [x, ...xs]
 
-export function repeat<T>(x: Parser<T>): Parser<T[]> {
-    function* g(reader: Reader): ResultSet<T[]> {
-        const stack: [ResultSet<T>, Result<T[]>][] = [[x(reader), { reader, value: [] }]];
-        while (stack.length > 0) {
-            const [gen, r1] = stack[0]!;
-            const { value, done } = gen.next();
-            if (done) {
-                yield r1;
-                stack.shift()
-            } else {
-                const r2: Result<T> = value!;
-                stack.unshift([
-                    x(r2.reader),
-                    { reader: r2.reader, value: [...r1.value, r2.value] }
-                ])
-            }
-        }
-        return null;
-    }
-    return g;
-}
+const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
+    alt(repeat1WithAcc(xs, x), succ(xs))
+const repeat1WithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
+    bind(x, (xv) => repeatWithAcc([...xs, xv], x))
 
-export const repeat1 = <T>(p: Parser<T>) => {
-    return map(seq(p, repeat(p)), cons)
-}
+export const repeat = <T>(x: Parser<T>) => repeatWithAcc([], x)
+export const repeat1 = <T>(x: Parser<T>) => repeat1WithAcc([], x)
 
 export function repeatSep<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]> {
     return optional(
@@ -180,9 +148,9 @@ export const oneOff = <T>(p: Parser<T>): Parser<T> => {
     function* g(reader: Reader) {
         for (const x of p(reader)) {
             yield x;
-            return null;
+            return;
         }
-        return null;
+        return;
     }
     return g
 }
@@ -262,26 +230,15 @@ export const anythingBalanced: Parser<string> = rec(() => flatten(
     )
 ))
 
-export const eof
-    = <T>(value: T): Parser<T> => {
-        function* g(reader: Reader) {
-            if (reader.atEnd()) {
-                yield { reader, value };
-            }
-            return null;
-        }
-        return g;
-    }
-
 export function seqFlatten(...ps: Parser<string>[]): Parser<string> {
     return flatten(seq(...ps))
 }
 
-export function seqDrop2<T1,T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
+export function seqDrop2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
     return drop2(seq(p1, p2))
 }
 
-export function seqDrop13<T1,T2,T3>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>): Parser<T2> {
+export function seqDrop13<T1, T2, T3>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>): Parser<T2> {
     return drop13(seq(p1, p2, p3))
 }
 
