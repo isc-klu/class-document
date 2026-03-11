@@ -82,6 +82,24 @@ export class Parser<A> {
     public bind<B>(f: (x: A) => Parser<B>) {
         return withReader((reader) => this.proceed(reader).flatMap(({ reader, value }) => f(value).proceed(reader)))
     }
+    public alt2<B>(p2: Parser<B>): Parser<A | B> {
+        const p1 = this;
+        return new Parser<A | B>(
+            function* (reader: Reader) {
+                yield* p1.proceed(reader);
+                yield* p2.proceed(reader);
+                return;
+            });
+    }
+    public seq2<B>(p2: Parser<B>): Parser<[A, B]> {
+        const p1 = this;
+        return p1.bind((x) => p2.bind((y) => succ([x, y])));
+    }
+}
+
+export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => new Parser((x: Reader) => lazyP().proceed(x));
+export function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
+    return p1.bind((x) => p2.bind((y) => succ([x, y])));
 }
 
 function withReader<T>(f: (_: Reader) => ResultSet<T>): Parser<T> {
@@ -90,21 +108,11 @@ function withReader<T>(f: (_: Reader) => ResultSet<T>): Parser<T> {
     });
 }
 
-export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => new Parser((x: Reader) => lazyP().proceed(x));
 export const once = <T>(p: Parser<T>): Parser<T> => withReader((reader) => p.proceed(reader).take(1));
-export function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
-    return new Parser<T1|T2>(function* (reader: Reader) {
-        yield* p1.proceed(reader);
-        yield* p2.proceed(reader);
-        return;
-    });
-}
 export const succ = <T>(value: T) => withReader((reader) => [{ reader, value }].values());
 export const fail: Parser<never> = withReader((_) => [].values());
 export const eof = <T>(value: T) => withReader((reader) => (reader.atEnd() ? [{ reader, value }] : []).values());
 export const strN = (n: number = 1) => withReader((reader) => reader.read(n));
 export const strWhile = (p: (x: string) => boolean = (_) => true) => withReader((reader) => reader.readWhile(p));
-export function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
-    return p1.bind((x) => p2.bind((y) => succ([x, y])));
-}
+
 
