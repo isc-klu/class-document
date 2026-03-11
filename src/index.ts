@@ -1,4 +1,4 @@
-import { AlPhA, alt2, altN, butNL, char, chars, cons, isChar, isSpace, join, literal, LiTeRaL, map, oneOrMore, Reader, sepList, seq2, seq3, seq4, seq5, seq6, seq7, seq9, seqN, space, succ, take1, zeroOrMore, type Parser } from "./langspec.js";
+import { alt2, altN, anythingBalanced, chars, eof, firstN, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, join, literal, LiTeRaL, map, oneOff, repeatSome, Reader, sepList, seq2, seq3, seq4, seq5, seq6, seq8, seq9, seqN, singleLineString, someChars, succ, take1, repeat, type Parser } from "./langspec.js";
 
 export class Dependency {
     keyword: string;
@@ -33,24 +33,45 @@ export class Extends {
     }
 }
 
-export class Description {
-    comment: string[]
+export class Keywords {
+    gapBefore: string
+    keywords: string[]
 
-    constructor(comment: string[]) {
-        this.comment = comment;
+    constructor(gapBefore: string, keywords: string[]) {
+        this.gapBefore = gapBefore
+        this.keywords = keywords;
     }
 
     public toString(): string {
-        return this.comment.map((line) => `///${line}\n`).join('')
+        return (
+            this.gapBefore +
+            '[' +
+            this.keywords.join(',') +
+            ']'
+        )
+    }
+}
+
+export class Description {
+    lines: string[]
+
+    constructor(lines: string[]) {
+        this.lines = lines;
+    }
+
+    public toString(): string {
+        return this.lines.join('')
     }
 }
 
 export abstract class Member {
+    description: Description;
     keyword: string;
     gapKeywordName: string;
     name: string;
     gapNameContent: string;
-    constructor(keyword: string, gapKeywordName: string, name: string, gapNameContent: string) {
+    constructor(description: Description, keyword: string, gapKeywordName: string, name: string, gapNameContent: string) {
+        this.description = description;
         this.keyword = keyword;
         this.gapKeywordName = gapKeywordName;
         this.name = name;
@@ -60,38 +81,162 @@ export abstract class Member {
     abstract toString(): string
 }
 
-export class PropertyLikeMember extends Member{
+export class PropertyLikeMember extends Member {
     content: string;
-    constructor(keyword: string, gapKeywordName: string, name: string, gapNameContent: string, content: string) {
-        super(keyword, gapKeywordName, name, gapNameContent);
-        this.content = content;
-    }
-
-    toString(): string {
-        return `${this.keyword}${this.gapKeywordName}${this.name}${this.gapNameContent}${this.content}`
-    }
-}
-
-export class XDataLikeMember extends Member{
-    keywords: null | string[];
-    gapKeywordsBegin: string;
-    content: string;
-    constructor(keyword: string, gapKeywordName: string, name: string, gapNameContent: string, keywords: null | string[], gapKeywordsBegin: string, content: string) {
-        super(keyword, gapKeywordName, name, gapNameContent);
-        this.keywords = keywords;
-        this.gapKeywordsBegin = gapKeywordsBegin;
+    constructor(description: Description, keyword: string, gapKeywordName: string, name: string, content: string) {
+        super(description, keyword, gapKeywordName, name, "");
         this.content = content;
     }
 
     toString(): string {
         return (
+            this.description.toString() + `${this.keyword}${this.gapKeywordName}${this.name}${this.gapNameContent}${this.content};`
+        )
+    }
+}
+
+export class ForeignKeyLikeMember extends Member {
+    ids: [string[], string[]];
+    content: string;
+    constructor(description: Description, keyword: string, gapKeywordName: string, name: string, ids: [string[], string[]], gapNameContent: string, content: string) {
+        super(description, keyword, gapKeywordName, name, gapNameContent);
+        this.ids = ids;
+        this.content = content;
+    }
+
+    toString(): string {
+        return (
+            this.description.toString() +
             this.keyword +
             this.gapKeywordName +
             this.name +
+            '(' +
+            this.ids[0].map((id, i) => (this.ids[1][i - 1] ?? "") + id).join("") +
+            ')' +
             this.gapNameContent +
-            (this.keywords === null ? "" : '[' + this.keywords.map((keyword) => keyword.toString()).join(',') + ']') +
-            this.gapKeywordsBegin + "{" +
-            this.content + "\n}"
+            this.content +
+            ';'
+        )
+    }
+}
+
+export class XDataLikeMember extends Member {
+    keywords: null | Keywords;
+    content: string;
+    constructor(
+        description: Description,
+        keyword: string,
+        gapKeywordName: string,
+        name: string,
+        keywords: null | Keywords,
+        gapNameContent: string,
+        content: string
+    ) {
+        super(description, keyword, gapKeywordName, name, gapNameContent);
+        this.keywords = keywords;
+        this.content = content;
+    }
+
+    toString(): string {
+        return (
+            this.description.toString() +
+            this.keyword +
+            this.gapKeywordName +
+            this.name +
+            (this.keywords === null ? "" : this.keywords.toString()) +
+            this.gapNameContent +
+            "{" +
+            this.content +
+            "}"
+        )
+    }
+}
+
+export class TriggerLikeMember extends Member {
+    keywords: null | Keywords;
+    content: string;
+    constructor(
+        description: Description,
+        keyword: string,
+        gapKeywordName: string,
+        name: string,
+        keywords: null | Keywords,
+        gapNameContent: string,
+        content: string
+    ) {
+        super(description, keyword, gapKeywordName, name, gapNameContent);
+        this.keywords = keywords;
+        this.content = content;
+    }
+
+    toString(): string {
+        return (
+            this.description.toString() +
+            this.keyword +
+            this.gapKeywordName +
+            this.name +
+            (this.keywords === null ? "" : this.keywords.toString()) +
+            this.gapNameContent +
+            "{" +
+            this.content +
+            "}"
+        )
+    }
+}
+
+export class MethodLikeMember extends Member {
+    keywords: null | Keywords;
+    content: string;
+    gapNameParen: string;
+    gapParenParams: string;
+    parameters: [string[], string[]];
+    gapParamsParen: string;
+    typeAnn: string;
+    constructor(
+        description: Description,
+        keyword: string,
+        gapKeywordName: string,
+        name: string,
+        gapNameParen: string,
+        [gapParenParams,
+            parameters,
+            gapParamsParen]:
+            [string,
+                [string[], string[]],
+                string],
+        typeAnn: string,
+        keywords: null | Keywords,
+        gapNameContent: string,
+        content: string
+    ) {
+        super(description, keyword, gapKeywordName, name, gapNameContent);
+        this.keywords = keywords;
+        this.gapNameParen = gapNameParen;
+        this.gapParenParams = gapParenParams;
+        this.parameters = parameters;
+        this.gapParamsParen = gapParamsParen;
+        this.typeAnn = typeAnn;
+        this.content = content;
+    }
+
+    toString(): string {
+        return (
+            this.description.toString() +
+            this.keyword +
+            this.gapKeywordName +
+            this.name +
+            this.gapNameParen +
+            '(' +
+            this.gapParenParams +
+            this.parameters[0].map((p, i) => (this.parameters[1][i - 1] ?? "") + p).join("") +
+            this.gapParamsParen +
+            ')' +
+            this.typeAnn +
+            (this.keywords === null ? "" : this.keywords.toString()) +
+            this.gapNameContent +
+            "{" +
+            this.content +
+            "}"
         )
     }
 }
@@ -105,12 +250,12 @@ export class Document {
     keyword: string;
     gapKeywordName: string;
     name: string;
-    extends: null | Extends
-    // keywords: null | string[];
-    // gapKeywordsBegin: string;
-    // members: (Member | string)[];
-    content: string;
-    
+    extends: null | Extends;
+    keywords: null | Keywords;
+    gapKeywordsBegin: string;
+    members: [string[], (string | Member)[]];
+    gapAfterClass: string;
+
     constructor(
         gapBeforeDeps: string,
         dependencies: (Dependency | string)[],
@@ -121,10 +266,10 @@ export class Document {
         gapKeywordName: string,
         name: string,
         ext: null | Extends,
-        // keywords: null | string[],
-        // gapKeywordsBegin: string,
-        // members: (Member | string)[],
-        content: string
+        keywords: null | Keywords,
+        gapKeywordsBegin: string,
+        members: [string[], (string | Member)[]],
+        gapAfterClass: string
     ) {
         this.gapBeforeDeps = gapBeforeDeps;
         this.dependencies = dependencies;
@@ -135,11 +280,10 @@ export class Document {
         this.gapKeywordName = gapKeywordName;
         this.name = name;
         this.extends = ext;
-        // this.gapExtendsKeywords = gapExtendsKeywords;
-        // this.keywords = keywords;
-        // this.gapKeywordsBegin = gapKeywordsBegin;
-        // this.members = members;
-        this.content = content;
+        this.keywords = keywords;
+        this.gapKeywordsBegin = gapKeywordsBegin;
+        this.members = members;
+        this.gapAfterClass = gapAfterClass;
     }
 
     public toString(): string {
@@ -150,40 +294,55 @@ export class Document {
             this.gapDepsDesc +
             this.description.toString() +
             this.gapDescKeyword +
-            this.keyword + 
+            this.keyword +
             this.gapKeywordName +
-            this.name + 
-            (this.extends === null ? "" : this.extends.toString()) +
-            // this.gapExtendsKeywords +
-            // (this.keywords === null ? "" : '[' + this.keywords.join(',') + ']') + this.gapKeywordsBegin +
-            // "{" +
-            // this.members.map((x) => x.toString()).join("") +
-            // "aftermembers" + 
-            this.content);
+            this.name +
+            (this.extends === null ? '' : this.extends.toString()) +
+            (this.keywords === null ? '' : this.keywords.toString()) +
+            this.gapKeywordsBegin +
+            '{' +
+            this.members[0].map((x, i) => (this.members[1][i - 1]?.toString() ?? "") + x).join("") +
+            '}' +
+            this.gapAfterClass
+        );
     }
 }
 
-const maybeGap = map(zeroOrMore(space), join);
-const strictGap = map(oneOrMore(space), join);
+const rangeCommentUnit = altN(
+    someChars((c) => c !== "*"),
+    firstN(2, (s) => s != "*/"),
+)
+const lineComment = map(seqN(altN(literal("//"), literal("#;")), chars(isButNL), literal("\n")), join)
+const rangeComment = map(seq3(literal("/*"), map(repeat(rangeCommentUnit), join), literal("*/")), join);
+const gapUnit = oneOff(altN(
+    someChars(isSpace),
+    lineComment,
+    rangeComment,
+));
+const maybeGap = map(repeat(gapUnit), join);
+const strictGap = map(repeatSome(gapUnit), join);
 const dependency = map(
     seq3(
         altN(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator")),
         strictGap,
-        map(oneOrMore(butNL), join),
+        someChars(isButNL),
     ),
     (parts) => new Dependency(...parts)
 );
-const dependencies = zeroOrMore(dependency);
+const dependencies = repeat(dependency);
 const descriptionLine = map(
-    seq3(literal("///"), map(oneOrMore(butNL), join),
-    literal("\n")), ([_slashes, comment, _nl]) => comment
+    seqN(chars(isSpaceButNL), literal("///"), chars(isButNL), literal("\n")),
+    join
 );
 const description = map(
-    zeroOrMore(descriptionLine),
+    repeat(descriptionLine),
     (parts) => new Description(parts),
 )
 
-const name = map(oneOrMore(altN(AlPhA, literal("%"), literal("."))), join);
+const symbol = someChars((c) => {
+    return isAlPhA(c) || isNumeral(c) || c === "%" || c === "." || c === "_"
+})
+const name = altN(symbol, singleLineString)
 
 const parentList = map(
     seq3(
@@ -197,7 +356,7 @@ const parentList = map(
     ([_1, parents, _2]) => parents
 )
 
-const ext = map(
+const parents = map(
     seq4(
         strictGap,
         LiTeRaL("extends"),
@@ -207,8 +366,184 @@ const ext = map(
     (parts) => new Extends(...parts)
 )
 
-const document = map(
+// We will figure out details later.
+const keywordValue = map(seqN(maybeGap, literal("="), maybeGap, anythingBalanced), join)
+const keyword = map(
+    altN(
+        seqN(name, altN(keywordValue, succ(""))),
+        seqN(LiTeRaL("Not"), strictGap, name)
+    ),
+    join
+)
+const keywords = map(
+    seq4(
+        maybeGap,
+        literal("["),
+        sepList(map(seqN(maybeGap, keyword, maybeGap), join), literal(",")),
+        literal("]"),
+    ),
+    ([gap, _2, [keywords, _commas], _3]) => new Keywords(gap, keywords)
+)
+
+const propertyLikeMember = map(
     seq6(
+        description,
+        altN(...[
+            "parameter",
+            "property",
+            "projection",
+            "index",
+            "foreignkey",
+            "relationship",
+        ].map(LiTeRaL)),
+        strictGap,
+        name,
+        chars((x) => x !== ";"),
+        literal(";")
+    ),
+    ([description, keyword, gap1, name, content, _]) => {
+        return new PropertyLikeMember(description, keyword, gap1, name, content)
+    }
+)
+
+const foreignkeyLikeMember = map(
+    seq8(
+        description,
+        LiTeRaL("foreignkey"),
+        strictGap,
+        name,
+        map(seq3(literal('('), sepList(name, map(seq3(maybeGap, literal(","), maybeGap), join)), literal(')')), ([_1, ids, _2]) => ids),
+        strictGap,
+        chars((x) => x !== ";"),
+        literal(";")
+    ),
+    ([description, keyword, gap1, name, ids, gap2, content, _]) => {
+        return new ForeignKeyLikeMember(description, keyword, gap1, name, ids, gap2, content)
+    }
+)
+
+const xdataLikeMember = map(
+    seq4(
+        seq6(
+            description,
+            altN(
+                LiTeRaL("xdata"),
+                LiTeRaL("storage")
+            ),
+            strictGap,
+            name,
+            alt2(keywords, succ(null)),
+            maybeGap,
+        ),
+        literal('{'),
+        anythingBalanced,
+        literal('}')
+    ),
+    ([head, _1, body, _2]) => {
+        return new XDataLikeMember(...head, body)
+    }
+)
+
+const triggerLikeMember = map(
+    seq4(
+        seq6(
+            description,
+            LiTeRaL("trigger"),
+            strictGap,
+            name,
+            alt2(keywords, succ(null)),
+            maybeGap,
+        ),
+        literal('{'),
+        anythingBalanced,
+        literal('}')
+    ),
+    ([head, _1, body, _2]) => {
+        return new TriggerLikeMember(...head, body)
+    }
+)
+
+const outputAnn = map(
+    seq2(altN(LiTeRaL("Output"), LiTeRaL("ByRef")), strictGap),
+    join
+)
+const typeAnn = map(
+    seq4(maybeGap, LiTeRaL("as"), maybeGap, anythingBalanced),
+    join
+)
+const defaultValue = map(
+    seq4(maybeGap, literal("="), maybeGap, anythingBalanced),
+    join
+)
+const parameter = map(seq4(
+    alt2(
+        outputAnn,
+        succ("")
+    ),
+    name,
+    alt2(typeAnn,
+        succ("")),
+    alt2(defaultValue,
+        succ(""))),
+    join)
+const parameters = map(
+    seq3(
+        literal('('),
+        seq3(
+            maybeGap,
+            sepList(parameter, map(seqN(maybeGap, literal(","), maybeGap), join)),
+            maybeGap
+        ),
+        literal(')'),
+    ),
+    ([_1, params, _2]) => params
+)
+const methodSignature: [Parser<Description>, Parser<string>, Parser<string>, Parser<string>, Parser<string>, Parser<[string, [string[], string[]], string]>, Parser<string>] = [
+    description,
+    altN(
+        LiTeRaL("trigger"),
+        LiTeRaL("method"),
+        LiTeRaL("classmethod"),
+        LiTeRaL("query"),
+    ),
+    strictGap,
+    name,
+    maybeGap,
+    parameters,
+    altN(typeAnn, succ("")),
+]
+const methodBodyBlock: [Parser<string>, Parser<string>, Parser<string>] = [
+    literal('{'),
+    anythingBalanced,
+    literal('}'),
+]
+const methodLikeMember = map(
+    seq4(
+        seq9(
+            ...methodSignature,
+            alt2(keywords, succ(null)),
+            maybeGap,
+        ),
+        ...methodBodyBlock
+    ),
+    ([head, _1, body, _2]) => {
+        return new MethodLikeMember(...head, body)
+    }
+)
+
+const member = altN<Member>(propertyLikeMember, foreignkeyLikeMember, xdataLikeMember, triggerLikeMember, methodLikeMember)
+const members = sepList(maybeGap, member)
+
+const documentBlock: Parser<[string[], (string | Member)[]]>= map(
+    seq3(
+        literal("{"),
+        members,
+        literal("}"),
+    ),
+    ([_1, x, _2]) => x
+)
+const document = map(
+    seq5(
         // before the class keyword
         seq5(
             maybeGap,
@@ -218,16 +553,24 @@ const document = map(
             maybeGap,
         ),
         // before "{"
-        LiTeRaL("class"),
-        strictGap,
-        name,
-        alt2(ext, succ(null)),
-        chars(isChar),
+        seq6(
+            LiTeRaL("class"),
+            strictGap,
+            name,
+            alt2(parents, succ(null)),
+            alt2(keywords, succ(null)),
+            maybeGap,
+        ),
+        documentBlock,
+        maybeGap,
+        eof(null)
     ),
-    ([beforeClass, ...parts]) => {
+    ([beforeClass, header, members, afterClass]) => {
         return new Document(
             ...beforeClass,
-            ...parts
+            ...header,
+            members,
+            afterClass
         )
     }
 )

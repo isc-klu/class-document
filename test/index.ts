@@ -1,5 +1,6 @@
 import * as fs from 'fs';
-import { Document, parseDocument } from '../src/index.js';
+import { parseDocument } from '../src/index.js';
+import assert from 'assert';
 
 class Section {
     title: string;
@@ -52,23 +53,21 @@ class Suite {
 }
 
 for (const file of fs.readdirSync(`./test/resource`)) {
-    // console.log(`Processing ${file}`)
-
     const fileString = fs.readFileSync(`./test/resource/${file}`);
     const suite = new Suite(fileString.toString());
-
     for (const sec of suite.content) {
         // console.log("At", sec.title)
+        // ignore negative tests because many of seems to be about semantics.
         if (sec.error) {
             continue
         }
         try {
             const doc = parseDocument(sec.objectscript);
-            console.assert(!sec.error, `FAILED: ${sec.title}`);
+            assert.ok(!sec.error, `FAILED: ${sec.title}`);
             const roundtrip = doc.toString();
-            console.assert(roundtrip === sec.objectscript, `FAILED: ${sec.title}\n\tSource is not preserved:\n${roundtrip}`)
+            assert.deepStrictEqual(roundtrip.split('\n'), sec.objectscript.split('\n'), `FAILED: ${sec.title} - Source is not preserved`)
         } catch (e) {
-            console.assert(sec.error, `FAILED: ${sec.title}\n\tunexpected error ${e}`);
+            assert.ok(sec.error, `FAILED: ${sec.title}\n\tunexpected error ${e}`);
         }
     }
 }
