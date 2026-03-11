@@ -253,6 +253,7 @@ const propertyCollection = seqFlatten(
     gap1,
     StR('Of'),
 );
+
 const asPropertyType = seqFlatten(
     gap,
     StR('as'),

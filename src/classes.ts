@@ -1,12 +1,9 @@
 export class Dependency {
-    keyword: string;
-    space: string;
-    content: string;
-    constructor(keyword: string, space: string, content: string) {
-        this.keyword = keyword;
-        this.space = space;
-        this.content = content;
-    }
+    constructor(
+        protected readonly keyword: string,
+        protected readonly space: string,
+        protected readonly content: string,
+    ) {}
 
     toString(): string {
         return this.keyword + this.space + this.content;
@@ -14,22 +11,12 @@ export class Dependency {
 }
 
 export class Extends {
-    gapBefore: string;
-    keyword: string;
-    gapKeywordParents: string;
-    parents: string | [string, string, string][];
-
     constructor(
-        gapBefore: string,
-        keyword: string,
-        gap: string,
-        parents: string | [string, string, string][],
-    ) {
-        this.gapBefore = gapBefore;
-        this.keyword = keyword;
-        this.gapKeywordParents = gap;
-        this.parents = parents;
-    }
+        protected readonly gapBefore: string,
+        protected readonly keyword: string,
+        protected readonly gapKeywordParents: string,
+        protected readonly parents: string | [string, string, string][],
+    ) {}
 
     public toString(): string {
         return (
@@ -44,17 +31,10 @@ export class Extends {
 }
 
 export class AnnKeywordList {
-    gapBefore: string;
-    // String when the keywords is essentially empty -- need a string to describe the gap between []
-    keywords: [string, string, string][] | string;
-
     constructor(
-        gapBefore: string,
-        keywords: [string, string, string][] | string,
-    ) {
-        this.gapBefore = gapBefore;
-        this.keywords = keywords;
-    }
+        protected readonly gapBefore: string,
+        protected readonly keywords: [string, string, string][] | string,
+    ) {}
 
     public toString(): string {
         return (
@@ -69,11 +49,7 @@ export class AnnKeywordList {
 }
 
 export class Description {
-    lines: string[];
-
-    constructor(lines: string[]) {
-        this.lines = lines;
-    }
+    constructor(protected readonly lines: string[]) {}
 
     public toString(): string {
         return this.lines.join('');
@@ -83,15 +59,11 @@ export class Description {
 export abstract class Member {
     description!: Description;
     gapDescriptionKeyword!: string;
-    keyword: string;
-    gapKeywordName: string;
-    name: string;
-    gapNameEnd: string;
     constructor(
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        gapNameEnd: string,
+        protected readonly keyword: string,
+        protected readonly gapKeywordName: string,
+        protected readonly name: string,
+        protected readonly gapNameEnd: string,
     ) {
         this.keyword = keyword;
         this.gapKeywordName = gapKeywordName;
@@ -111,8 +83,8 @@ export abstract class Member {
 
 export class AnnType {
     constructor(
-        private keyword: string,
-        private type: string,
+        protected keyword: string,
+        protected type: string,
     ) {}
 
     toString() {
@@ -122,8 +94,8 @@ export class AnnType {
 
 export class AnnValue {
     constructor(
-        private keyword: string,
-        private type: string,
+        protected readonly keyword: string,
+        protected readonly type: string,
     ) {}
 
     toString() {
@@ -136,9 +108,9 @@ export class MParameter extends Member {
         keyword: string,
         gapKeywordName: string,
         name: string,
-        private annType: string | null,
-        private keywords: AnnKeywordList | null,
-        private annValue: AnnValue | null,
+        protected readonly annType: string | null,
+        protected readonly keywords: AnnKeywordList | null,
+        protected readonly annValue: AnnValue | null,
         gapNameEnd: string,
     ) {
         super(keyword, gapKeywordName, name, gapNameEnd);
@@ -163,8 +135,8 @@ export class MPropertyOrProjection extends Member {
         keyword: string,
         gapKeywordName: string,
         name: string,
-        private annClassName: string | null,
-        private keywordList: AnnKeywordList | null,
+        protected readonly annClassName: string | null,
+        protected readonly keywordList: AnnKeywordList | null,
         gapNameEnd: string,
     ) {
         super(keyword, gapKeywordName, name, gapNameEnd);
