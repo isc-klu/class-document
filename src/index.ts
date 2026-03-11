@@ -1,5 +1,5 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { alt2, altN, anythingBalanced, chars, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, join, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq2, seq3, seq4, seq5, seq6, seq8, seq9, seqN, singleLineString, succ, take1, type Parser } from "./langspec.js";
+import { alt2, altN, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, join, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
 
 const rCommentStart = literal("/*");
 const rCommentContentUnit = altN(
@@ -8,14 +8,18 @@ const rCommentContentUnit = altN(
 )
 const rCommentContent = flatten(repeat(rCommentContentUnit));
 const rCommentEnd = literal("*/");
-const rComment = flatten(seq3(rCommentStart, rCommentContent, rCommentEnd));
+const rComment = flatten(seq(rCommentStart, rCommentContent, rCommentEnd));
 
 const lCommentHead = altN(
     literal("//"),
     literal("#;")
 );
-const lCommentContent = chars(isButNL);
-const lComment = flatten(seqN(lCommentHead, lCommentContent, literal("\n")))
+const lCommentContent = altN(
+    eof(""),
+    succ(""),
+    flatten(seq(firstN(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL)))
+);
+const lComment = flatten(seq(lCommentHead, lCommentContent, literal("\n")))
 
 const spaceUnit = once(altN(
     readWhile1(isSpace),
@@ -25,71 +29,63 @@ const spaceUnit = once(altN(
 const space = flatten(repeat(spaceUnit));
 const space1 = flatten(repeat1(spaceUnit));
 
-
 const dependencyKeyword = altN(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator"));
 const dependency = map(
-    seq3(dependencyKeyword, space1, readWhile1(isButNL)),
+    seq(dependencyKeyword, space1, readWhile1(isButNL)),
     (parts) => new Dependency(...parts)
 );
 const dependencies = repeat(dependency);
-const descriptionLine = map(
-    seqN(chars(isSpaceButNL), literal("///"), chars(isButNL), literal("\n")),
-    join
+
+const dCommentLine = flatten(
+    seq(readWhile(isSpaceButNL), literal("///"), readWhile(isButNL), literal("\n"))
 );
-const description = map(
-    repeat(descriptionLine),
+const dComment = map(
+    repeat(dCommentLine),
     (parts) => new Description(parts),
 )
 
-const symbol = readWhile1((c) => {
-    return isAlPhA(c) || isNumeral(c) || c === "%" || c === "." || c === "_"
-})
-const name = altN(symbol, singleLineString)
-
-const parentList = map(
-    seq3(
-        literal("("),
-        map(
-            repeatSep(map(seqN(space, name, space), join), literal(",")),
-            ([parents, _gaps]) => parents
-        ),
-        literal(")"),
-    ),
-    ([_1, parents, _2]) => parents
+const symbol = once(readWhile1((c) => isAlPhA(c) || isNumeral(c) || c === "%" || c === "." || c === "_"))
+const name = altN(
+    symbol,
+    singleLineString
 )
 
-const parents = map(
-    seq4(
-        space1,
-        LiTeRaL("extends"),
-        space1,
-        alt2(name, parentList),
-    ),
+const nameList = drop13(
+    seq(literal("("), drop2(repeatSep(flatten(seq(space, name, space)), literal(","))), literal(")"))
+)
+
+const classExtendsValue = alt2(
+    name,
+    nameList
+);
+const classExtends = map(
+    seq(space1, LiTeRaL("extends"), space1, classExtendsValue),
     (parts) => new Extends(...parts)
 )
 
-// We will figure out details later.
-const keywordValue = map(seqN(space, literal("="), space, anythingBalanced), join)
-const keyword = map(
+const keywordValue = map(seq(space, literal("="), space, anyBalanced), join)
+const keyword =
     altN(
-        seqN(name, optional(keywordValue, "")),
-        seqN(LiTeRaL("Not"), space1, name)
-    ),
-    join
-)
+        flatten(seq(name, optional(keywordValue, ""))),
+        flatten(seq(LiTeRaL("Not"), space1, name))
+    )
 const keywords = map(
-    seq4(
+    seq(
         space,
-        literal("["),
-        repeatSep(map(seqN(space, keyword, space), join), literal(",")),
-        literal("]"),
+        drop13(
+            seq(
+                literal("["),
+                drop2(repeatSep(map(seq(space, keyword, space), join), literal(","))),
+                literal("]")
+            ))
     ),
-    ([gap, _2, [keywords, _commas], _3]) => new Keywords(gap, keywords)
+    (parts) => new Keywords(...parts)
 )
 
 const propertyLikeMember = map(
-    seq6(
-        description,
+    seq(
+        dComment,
+        space,
         altN(...[
             "parameter",
             "property",
@@ -100,34 +96,36 @@ const propertyLikeMember = map(
         ].map(LiTeRaL)),
         space1,
         name,
-        chars((x) => x !== ";"),
+        readWhile((x) => x !== ";"),
         literal(";")
     ),
-    ([description, keyword, gap1, name, content, _]) => {
-        return new PropertyLikeMember(description, keyword, gap1, name, content)
+    ([description, gap0, keyword, gap1, name, content, _]) => {
+        return new PropertyLikeMember(description, gap0, keyword, gap1, name, content)
     }
 )
 
-const foreignkeyLikeMember = map(
-    seq8(
-        description,
+const mForeignKey = map(
+    seq(
+        dComment,
+        space,
         LiTeRaL("foreignkey"),
         space1,
         name,
-        map(seq3(literal('('), repeatSep(name, map(seq3(space, literal(","), space), join)), literal(')')), ([_1, ids, _2]) => ids),
+        map(seq(literal('('), repeatSep(name, map(seq(space, literal(","), space), join)), literal(')')), ([_1, ids, _2]) => ids),
         space1,
-        chars((x) => x !== ";"),
+        readWhile((x) => x !== ";"),
         literal(";")
     ),
-    ([description, keyword, gap1, name, ids, gap2, content, _]) => {
-        return new ForeignKeyLikeMember(description, keyword, gap1, name, ids, gap2, content)
+    ([description, gap0, keyword, gap1, name, ids, gap2, content, _]) => {
+        return new ForeignKeyLikeMember(description, gap0, keyword, gap1, name, ids, gap2, content)
     }
 )
 
-const xdataLikeMember = map(
-    seq4(
-        seq6(
-            description,
+const mXData = map(
+    seq(
+        seq(
+            dComment,
+            space,
             altN(
                 LiTeRaL("xdata"),
                 LiTeRaL("storage")
@@ -138,7 +136,7 @@ const xdataLikeMember = map(
             space,
         ),
         literal('{'),
-        anythingBalanced,
+        anyBalanced,
         literal('}')
     ),
     ([head, _1, body, _2]) => {
@@ -146,55 +144,43 @@ const xdataLikeMember = map(
     }
 )
 
-const triggerLikeMember = map(
-    seq4(
-        seq6(
-            description,
-            LiTeRaL("trigger"),
-            space1,
-            name,
-            optional(keywords),
-            space,
-        ),
-        literal('{'),
-        anythingBalanced,
-        literal('}')
+const mTrigger = map(
+    seq(
+        dComment,
+        space,
+        LiTeRaL("trigger"),
+        space1,
+        name,
+        optional(keywords),
+        space,
+        drop13(seq(literal('{'), anyBalanced, literal('}')))
     ),
-    ([head, _1, body, _2]) => {
-        return new TriggerLikeMember(...head, body)
-    }
+    (parts) => new TriggerLikeMember(...parts)
 )
 
-const annOutput = map(
-    seq2(altN(LiTeRaL("Output"), LiTeRaL("ByRef")), space1),
-    join
+const annOutputKeyword = altN(
+    LiTeRaL("Output"),
+    LiTeRaL("ByRef")
 )
-const annAs = map(
-    seq4(space, LiTeRaL("as"), space, anythingBalanced),
-    join
+const annOutput = flatten(
+    seq(annOutputKeyword, space1)
 )
-const annEq = map(
-    seq4(space, literal("="), space, anythingBalanced),
-    join
+const annAs = seqFlatten(
+    space, LiTeRaL("as"), space, anyBalanced
 )
-const parameter = map(
-    seq4(optional(annOutput), name, optional(annAs), optional(annEq)),
-    join
+const annEq = seqFlatten(
+    space, literal("="), space, anyBalanced
 )
-const parameters = map(
-    seq3(
-        literal('('),
-        seq3(
-            space,
-            repeatSep(parameter, map(seqN(space, literal(","), space), join)),
-            space
-        ),
-        literal(')'),
-    ),
-    ([_1, params, _2]) => params
+const parameter = seqFlatten(
+    optional(annOutput), name, optional(annAs), optional(annEq)
 )
-const methodSignature: [Parser<Description>, Parser<string>, Parser<string>, Parser<string>, Parser<string>, Parser<[string, [string[], string[]], string]>, Parser<string>] = [
-    description,
+const parameters = repeatSep(parameter, seqFlatten(space, literal(","), space));
+const parameterList = seqDrop15(
+    literal('('), space, parameters, space, literal(')')
+)
+const methodSignature = seq(
+    dComment,
+    space,
     altN(
         LiTeRaL("trigger"),
         LiTeRaL("method"),
@@ -204,33 +190,31 @@ const methodSignature: [Parser<Description>, Parser<string>, Parser<string>, Par
     space1,
     name,
     space,
-    parameters,
+    parameterList,
     altN(annAs, succ("")),
-]
-const methodBodyBlock: [Parser<string>, Parser<string>, Parser<string>] = [
+)
+const mMethodBody = seqDrop13(
     literal('{'),
-    anythingBalanced,
-    literal('}'),
-]
-const methodLikeMember = map(
-    seq4(
-        seq9(
-            ...methodSignature,
-            optional(keywords),
-            space,
-        ),
-        ...methodBodyBlock
+    anyBalanced,
+    literal('}')
+)
+const mMethod = map(
+    seq(
+        methodSignature,
+        optional(keywords),
+        space,
+        mMethodBody
     ),
-    ([head, _1, body, _2]) => {
-        return new MethodLikeMember(...head, body)
+    ([h1, h2, h3, body]) => {
+        return new MethodLikeMember(...h1, h2, h3, body)
     }
 )
 
-const member = altN<Member>(propertyLikeMember, foreignkeyLikeMember, xdataLikeMember, triggerLikeMember, methodLikeMember)
+const member = altN<Member>(propertyLikeMember, mForeignKey, mXData, mTrigger, mMethod)
 const members = repeatSep(space, member)
 
 const documentBlock: Parser<[string[], (string | Member)[]]> = map(
-    seq3(
+    seq(
         literal("{"),
         members,
         literal("}"),
@@ -238,21 +222,21 @@ const documentBlock: Parser<[string[], (string | Member)[]]> = map(
     ([_1, x, _2]) => x
 )
 const document = map(
-    seq5(
+    seq(
         // before the class keyword
-        seq5(
+        seq(
             space,
             dependencies,
             space,
-            description,
+            dComment,
             space,
         ),
         // before "{"
-        seq6(
+        seq(
             LiTeRaL("class"),
             space1,
             name,
-            optional(parents),
+            optional(classExtends),
             optional(keywords),
             space,
         ),

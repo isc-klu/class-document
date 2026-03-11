@@ -52,7 +52,7 @@ export type Parser<T> = (reader: Reader) => ResultSet<T>
 
 export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
     function* g(reader: Reader) {
-        yield* p(reader).map(({ reader, value }) => ({ reader, value: f(value)}))
+        yield* p(reader).map(({ reader, value }) => ({ reader, value: f(value) }))
     }
     return g;
 }
@@ -117,24 +117,77 @@ export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
     return (x) => lazyP()(x)
 }
 
-export function seq3<T1, T2, T3>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>): Parser<[T1, T2, T3]> {
-    return map(seq2(p1, seq2(p2, p3)), ([x1, [x2, x3]]) => [x1, x2, x3])
-}
+export function seq<T>(): Parser<T[]>;
 
-export function seq4<T1, T2, T3, T4>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>): Parser<[T1, T2, T3, T4]> {
-    return map(seq2(p1, seq2(p2, seq2(p3, p4))), ([x1, [x2, [x3, x4]]]) => [x1, x2, x3, x4])
-}
+export function seq<T1, T2>(
+    p1: Parser<T1>,
+    p2: Parser<T2>
+): Parser<[T1, T2]>;
 
-export function seq5<T1, T2, T3, T4, T5>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>): Parser<[T1, T2, T3, T4, T5]> {
-    return map(seq2(p1, seq4(p2, p3, p4, p5)), ([x1, x2345]) => [x1, ...x2345])
-}
+export function seq<T1, T2, T3>(
+    p1: Parser<T1>,
+    p2: Parser<T2>,
+    p3: Parser<T3>
+): Parser<[T1, T2, T3]>;
 
-export const seq6 = <T1, T2, T3, T4, T5, T6>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>, p6: Parser<T6>): Parser<[T1, T2, T3, T4, T5, T6]> => map(seq2(seq3(p1, p2, p3), seq3(p4, p5, p6)), ([x123, x456]) => [...x123, ...x456])
-export const seq7 = <T1, T2, T3, T4, T5, T6, T7>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>, p6: Parser<T6>, p7: Parser<T7>): Parser<[T1, T2, T3, T4, T5, T6, T7]> => map(seq2(seq4(p1, p2, p3, p4), seq3(p5, p6, p7)), ([x1234, x567]) => [...x1234, ...x567])
-export const seq8 = <T1, T2, T3, T4, T5, T6, T7, T8>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>, p6: Parser<T6>, p7: Parser<T7>, p8: Parser<T8>): Parser<[T1, T2, T3, T4, T5, T6, T7, T8]> => map(seq2(seq4(p1, p2, p3, p4), seq4(p5, p6, p7, p8)), ([x, y]) => [...x, ...y])
-export const seq9 = <T1, T2, T3, T4, T5, T6, T7, T8, T9>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>, p6: Parser<T6>, p7: Parser<T7>, p8: Parser<T8>, p9: Parser<T9>): Parser<[T1, T2, T3, T4, T5, T6, T7, T8, T9]> => map(seq2(seq4(p1, p2, p3, p4), seq5(p5, p6, p7, p8, p9)), ([x, y]) => [...x, ...y])
+export function seq<T1, T2, T3, T4>(
+    p1: Parser<T1>,
+    p2: Parser<T2>,
+    p3: Parser<T3>,
+    p4: Parser<T4>
+): Parser<[T1, T2, T3, T4]>;
 
-export function seqN<T>(...ps: Parser<T>[]): Parser<T[]> {
+export function seq<T1, T2, T3, T4, T5>(
+    p1: Parser<T1>,
+    p2: Parser<T2>,
+    p3: Parser<T3>,
+    p4: Parser<T4>,
+    p5: Parser<T5>
+): Parser<[T1, T2, T3, T4, T5]>;
+
+export function seq<T1, T2, T3, T4, T5, T6>(
+    p1: Parser<T1>,
+    p2: Parser<T2>,
+    p3: Parser<T3>,
+    p4: Parser<T4>,
+    p5: Parser<T5>,
+    p6: Parser<T6>
+): Parser<[T1, T2, T3, T4, T5, T6]>;
+
+export function seq<T1, T2, T3, T4, T5, T6, T7>(
+    p1: Parser<T1>,
+    p2: Parser<T2>,
+    p3: Parser<T3>,
+    p4: Parser<T4>,
+    p5: Parser<T5>,
+    p6: Parser<T6>,
+    p7: Parser<T7>,
+): Parser<[T1, T2, T3, T4, T5, T6, T7]>;
+
+export function seq<T1, T2, T3, T4, T5, T6, T7, T8>(
+    p1: Parser<T1>,
+    p2: Parser<T2>,
+    p3: Parser<T3>,
+    p4: Parser<T4>,
+    p5: Parser<T5>,
+    p6: Parser<T6>,
+    p7: Parser<T7>,
+    p8: Parser<T8>
+): Parser<[T1, T2, T3, T4, T5, T6, T7, T8]>;
+
+export function seq<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+    p1: Parser<T1>,
+    p2: Parser<T2>,
+    p3: Parser<T3>,
+    p4: Parser<T4>,
+    p5: Parser<T5>,
+    p6: Parser<T6>,
+    p7: Parser<T7>,
+    p8: Parser<T8>,
+    p9: Parser<T9>
+): Parser<[T1, T2, T3, T4, T5, T6, T7, T8, T9]>;
+export function seq<T>(...ps: Parser<T>[]): Parser<T[]>;
+export function seq<T>(...ps: Parser<T>[]): Parser<T[]> {
     return ps.reduceRight((acc, p) => map(seq2(p, acc), cons), succ([] as T[]));
 }
 
@@ -282,18 +335,18 @@ export const singleQuotedContent = map(
     join
 )
 export const singleLineString = altN(
-    map(seq3(literal('"'), doubleQuotedContent, literal('"')), join),
-    map(seq3(literal("'"), singleQuotedContent, literal("'")), join)
+    map(seq(literal('"'), doubleQuotedContent, literal('"')), join),
+    map(seq(literal("'"), singleQuotedContent, literal("'")), join)
 )
 export const anythingBalanced: Parser<string> = rec(() => map(
     repeat(
         altN(
             oneOff(someChars((c) => /[^()\[\]\{\}<>"']/.test(c))),
             singleLineString,
-            map(seq3(literal('('), anythingBalanced, literal(')')), join),
-            map(seq3(literal('['), anythingBalanced, literal(']')), join),
-            map(seq3(literal('{'), anythingBalanced, literal('}')), join),
-            map(seq3(literal('<'), anythingBalanced, literal('>')), join),
+            map(seq(literal('('), anythingBalanced, literal(')')), join),
+            map(seq(literal('['), anythingBalanced, literal(']')), join),
+            map(seq(literal('{'), anythingBalanced, literal('}')), join),
+            map(seq(literal('<'), anythingBalanced, literal('>')), join),
         )
     ),
     join)
@@ -313,4 +366,32 @@ export const eof
 
 export const flatten = (p: Parser<string[]>): Parser<string> => {
     return map(p, join)
+}
+
+export const drop13 = <T1, T2, T3>(p: Parser<[T1, T2, T3]>) => {
+    return map(p, ([_1, x, _2]) => x)
+}
+
+export const drop15 = <T1, T2, T3, T4, T5>(p: Parser<[T1, T2, T3, T4, T5]>): Parser<[T2, T3, T4]> => {
+    return map(p, ([_1, x2, x3, x4, _5]) => [x2, x3, x4])
+}
+
+export const drop1 = <T1, T2>(p: Parser<[T1, T2]>) => {
+    return map(p, ([x, _]) => x)
+}
+
+export const drop2 = <T1, T2>(p: Parser<[T1, T2]>) => {
+    return map(p, ([x, _]) => x)
+}
+
+export function seqFlatten(...ps: Parser<string>[]): Parser<string> {
+    return flatten(seq(...ps))
+}
+
+export function seqDrop13<T1,T2,T3>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>): Parser<T2> {
+    return drop13(seq(p1, p2, p3))
+}
+
+export function seqDrop15<T1, T2, T3, T4, T5>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>): Parser<[T2, T3, T4]> {
+    return drop15(seq(p1, p2, p3, p4, p5))
 }

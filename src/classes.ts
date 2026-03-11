@@ -65,12 +65,14 @@ export class Description {
 
 export abstract class Member {
     description: Description;
+    gapDescKeyword: string;
     keyword: string;
     gapKeywordName: string;
     name: string;
     gapNameContent: string;
-    constructor(description: Description, keyword: string, gapKeywordName: string, name: string, gapNameContent: string) {
+    constructor(description: Description, gapDescKeyword: string, keyword: string, gapKeywordName: string, name: string, gapNameContent: string) {
         this.description = description;
+        this.gapDescKeyword = gapDescKeyword;
         this.keyword = keyword;
         this.gapKeywordName = gapKeywordName;
         this.name = name;
@@ -82,14 +84,16 @@ export abstract class Member {
 
 export class PropertyLikeMember extends Member {
     content: string;
-    constructor(description: Description, keyword: string, gapKeywordName: string, name: string, content: string) {
-        super(description, keyword, gapKeywordName, name, "");
+    constructor(description: Description, gapDescriptionKeyword: string, keyword: string, gapKeywordName: string, name: string, content: string) {
+        super(description, gapDescriptionKeyword, keyword, gapKeywordName, name, "");
         this.content = content;
     }
 
     toString(): string {
         return (
-            this.description.toString() + `${this.keyword}${this.gapKeywordName}${this.name}${this.gapNameContent}${this.content};`
+            this.description.toString() + 
+            this.gapDescKeyword +
+            `${this.keyword}${this.gapKeywordName}${this.name}${this.gapNameContent}${this.content};`
         );
     }
 }
@@ -97,8 +101,8 @@ export class PropertyLikeMember extends Member {
 export class ForeignKeyLikeMember extends Member {
     ids: [string[], string[]];
     content: string;
-    constructor(description: Description, keyword: string, gapKeywordName: string, name: string, ids: [string[], string[]], gapNameContent: string, content: string) {
-        super(description, keyword, gapKeywordName, name, gapNameContent);
+    constructor(description: Description, gapDescKeyword: string, keyword: string, gapKeywordName: string, name: string, ids: [string[], string[]], gapNameContent: string, content: string) {
+        super(description, gapDescKeyword, keyword, gapKeywordName, name, gapNameContent);
         this.ids = ids;
         this.content = content;
     }
@@ -106,6 +110,7 @@ export class ForeignKeyLikeMember extends Member {
     toString(): string {
         return (
             this.description.toString() +
+            this.gapDescKeyword +
             this.keyword +
             this.gapKeywordName +
             this.name +
@@ -124,6 +129,7 @@ export class XDataLikeMember extends Member {
     content: string;
     constructor(
         description: Description,
+        gapDescKeyword: string,
         keyword: string,
         gapKeywordName: string,
         name: string,
@@ -131,7 +137,7 @@ export class XDataLikeMember extends Member {
         gapNameContent: string,
         content: string
     ) {
-        super(description, keyword, gapKeywordName, name, gapNameContent);
+        super(description, gapDescKeyword, keyword, gapKeywordName, name, gapNameContent);
         this.keywords = keywords;
         this.content = content;
     }
@@ -139,6 +145,7 @@ export class XDataLikeMember extends Member {
     toString(): string {
         return (
             this.description.toString() +
+            this.gapDescKeyword +
             this.keyword +
             this.gapKeywordName +
             this.name +
@@ -156,6 +163,7 @@ export class TriggerLikeMember extends Member {
     content: string;
     constructor(
         description: Description,
+        gapDescKeyword: string,
         keyword: string,
         gapKeywordName: string,
         name: string,
@@ -163,7 +171,7 @@ export class TriggerLikeMember extends Member {
         gapNameContent: string,
         content: string
     ) {
-        super(description, keyword, gapKeywordName, name, gapNameContent);
+        super(description, gapDescKeyword, keyword, gapKeywordName, name, gapNameContent);
         this.keywords = keywords;
         this.content = content;
     }
@@ -171,6 +179,7 @@ export class TriggerLikeMember extends Member {
     toString(): string {
         return (
             this.description.toString() +
+            this.gapDescKeyword +
             this.keyword +
             this.gapKeywordName +
             this.name +
@@ -193,6 +202,7 @@ export class MethodLikeMember extends Member {
     typeAnn: string;
     constructor(
         description: Description,
+        gapDescKeyword: string,
         keyword: string,
         gapKeywordName: string,
         name: string,
@@ -205,7 +215,7 @@ export class MethodLikeMember extends Member {
         gapNameContent: string,
         content: string
     ) {
-        super(description, keyword, gapKeywordName, name, gapNameContent);
+        super(description, gapDescKeyword, keyword, gapKeywordName, name, gapNameContent);
         this.keywords = keywords;
         this.gapNameParen = gapNameParen;
         this.gapParenParams = gapParenParams;
@@ -218,6 +228,7 @@ export class MethodLikeMember extends Member {
     toString(): string {
         return (
             this.description.toString() +
+            this.gapDescKeyword +
             this.keyword +
             this.gapKeywordName +
             this.name +
