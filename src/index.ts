@@ -1,34 +1,34 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { readWhile, eof, readIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once, Reader, readWhile1, repeat, repeat1, repeatSep, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, isLetter, filter, dbg, type Parser } from "./langspec/index.js";
+import { strWhile, eof, strIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, str, StR, map, once, Reader, strWhile1, repeat, repeat1, repeatSep, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, isLetter, filter, dbg, type Parser } from "./langspec/index.js";
 import { balanced, balancedElement, simpleString, word } from "./langspec/pl.js";
 import { alt, optional } from "./langspec/alt.js";
 import { seq } from "./langspec/seq.js";
 
 // Range Comment
-const rCommentStart = readStr("/*");
+const rCommentStart = str("/*");
 const rCommentContentElem = alt(
-    once(readWhile1((c) => c !== "*")),
-    readIf(2, (s) => s != "*/"),
+    once(strWhile1((c) => c !== "*")),
+    strIf(2, (s) => s != "*/"),
 )
 const rCommentContent = flatten(repeat(rCommentContentElem));
-const rCommentEnd = readStr("*/");
+const rCommentEnd = str("*/");
 const rComment = flatten(seq(rCommentStart, rCommentContent, rCommentEnd));
 
 // Line Comment
 const lCommentHead = alt(
-    readStr("//"),
-    readStr("#;")
+    str("//"),
+    str("#;")
 );
 const lCommentContent = alt(
-    flatten(seq(readIf(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL))),
-    readStr(""),
+    flatten(seq(strIf(1, (c) => /[^\n\/]/.test(c)), strWhile(isButNL))),
+    str(""),
     eof(""),
 );
-const lComment = flatten(seq(lCommentHead, lCommentContent, readStr("\n")))
+const lComment = flatten(seq(lCommentHead, lCommentContent, str("\n")))
 
 // Gap Between "Meaningful" Elements
 const gapElem = once(alt(
-    readWhile1(isSpace),
+    strWhile1(isSpace),
     lComment,
     rComment,
 ));
@@ -36,16 +36,16 @@ const gap = flatten(repeat(gapElem));
 const gap1 = flatten(repeat1(gapElem));
 
 // Document Dependencies (i.e., import, include, and includegenerator clauses)
-const dependencyKeyword = alt(readStR("import"), readStR("include"), readStR("includegenerator"));
+const dependencyKeyword = alt(StR("import"), StR("include"), StR("includegenerator"));
 const dependency = map(
-    seq(dependencyKeyword, gap1, readWhile1(isButNL)),
+    seq(dependencyKeyword, gap1, strWhile1(isButNL)),
     (parts) => new Dependency(...parts)
 );
 const dependencies = repeat(dependency);
 
 // Document Comments (only allowed before the class and class members)
 const dCommentLine = flatten(
-    seq(readWhile(isSpaceButNL), readStr("///"), readWhile(isButNL), readStr("\n"))
+    seq(strWhile(isSpaceButNL), str("///"), strWhile(isButNL), str("\n"))
 );
 const dComment = map(
     repeat(dCommentLine),
@@ -64,16 +64,16 @@ const nameList = seqDrop13(
 
 const value = flatten(once(repeat1(alt(
     balancedElement(),
-    readStr("/"),
-    readStr("_"),
-    readStr("-"),
-    readStr("."),
-    readStr("%")
+    str("/"),
+    str("_"),
+    str("-"),
+    str("."),
+    str("%")
 ))));
 
-const typeParamWithPad = seqFlatten(gap, value, gap, readStr("="), gap, value, gap)
+const typeParamWithPad = seqFlatten(gap, value, gap, str("="), gap, value, gap)
 const typeParamList = seqFlatten(
-    readStr("("), map(repeatSepWithStr(typeParamWithPad, ","), (xs) => xs.join(",")), readStr(")")
+    str("("), map(repeatSepWithStr(typeParamWithPad, ","), (xs) => xs.join(",")), str(")")
 )
 const clsType = seqFlatten(
     value,
@@ -87,15 +87,15 @@ const clsType = seqFlatten(
 )
 
 const asType = seqFlatten(
-    gap, readStR("as"), gap, clsType
+    gap, StR("as"), gap, clsType
 )
 
 const annKeywords = (keywordName: Parser<string>) => {
-    const keywordValueAnn = seqFlatten(gap, readStr("="), gap, value)
+    const keywordValueAnn = seqFlatten(gap, str("="), gap, value)
     const keywordClause =
         alt(
             flatten(seq(keywordName, optional(keywordValueAnn, ""))),
-            flatten(seq(readStR("Not"), gap1, keywordName))
+            flatten(seq(StR("Not"), gap1, keywordName))
         )
     const keywordWithPad = seq(gap, keywordClause, gap);
     const keywords = alt(repeatSepWithStr(keywordWithPad, ","), gap);
@@ -108,105 +108,105 @@ const annKeywords = (keywordName: Parser<string>) => {
 }
 
 const classAnnKeywords = annKeywords(alt(
-    readStR("Abstract"),
-    readStR("ClassType"),
-    readStR("ClientDataType"),
-    readStR("ClientName"),
-    readStR("CompileAfter"),
-    readStR("DdlAllowed"),
-    readStR("DependsOn"),
-    readStR("Deprecated"),
-    readStR("Final"),
-    readStR("GeneratedBy"),
-    readStR("Hidden"),
-    readStR("Inheritance"),
-    readStR("Language"),
-    readStR("LegacyInstanceContext"),
-    readStR("NoExtent"),
-    readStR("OdbcType"),
-    readStR("Owner"),
-    readStR("ProcedureBlock"),
-    readStR("PropertyClass"),
-    readStR("ServerOnly"),
-    readStR("Sharded"),
-    readStR("SoapBindingStyle"),
-    readStR("SoapBodyUse"),
-    readStR("SqlCategory"),
-    readStR("SqlRowIdName"),
-    readStR("SqlRowIdPrivate"),
-    readStR("SqlTableName"),
-    readStR("StorageStrategy"),
-    readStR("System"),
-    readStR("ViewQuery")
+    StR("Abstract"),
+    StR("ClassType"),
+    StR("ClientDataType"),
+    StR("ClientName"),
+    StR("CompileAfter"),
+    StR("DdlAllowed"),
+    StR("DependsOn"),
+    StR("Deprecated"),
+    StR("Final"),
+    StR("GeneratedBy"),
+    StR("Hidden"),
+    StR("Inheritance"),
+    StR("Language"),
+    StR("LegacyInstanceContext"),
+    StR("NoExtent"),
+    StR("OdbcType"),
+    StR("Owner"),
+    StR("ProcedureBlock"),
+    StR("PropertyClass"),
+    StR("ServerOnly"),
+    StR("Sharded"),
+    StR("SoapBindingStyle"),
+    StR("SoapBodyUse"),
+    StR("SqlCategory"),
+    StR("SqlRowIdName"),
+    StR("SqlRowIdPrivate"),
+    StR("SqlTableName"),
+    StR("StorageStrategy"),
+    StR("System"),
+    StR("ViewQuery")
 ));
 
 const propertyAnnKeywords = annKeywords(alt(
-    readStR("Aliases"),
-    readStR("Calculated"),
-    readStR("Cardinality"),
-    readStR("ClientName"),
-    readStR("Collection"),
-    readStR("ComputeLocalOnly"),
-    readStR("Deferred"),
-    readStR("Deprecated"),
-    readStR("Final"),
-    readStR("Identity"),
-    readStR("InitialExpression"),
-    readStR("Internal"),
-    readStR("Inverse"),
-    readStR("MultiDimensional"),
-    readStR("OnDelete"),
-    readStR("Private"),
-    readStR("ReadOnly"),
-    readStR("Required"),
-    readStR("ServerOnly"),
-    readStR("SqlColumnNumber"),
-    readStR("SqlComputeCode"),
-    readStR("SqlComputed"),
-    readStR("SqlComputeOnChange"),
-    readStR("SqlFieldName"),
-    readStR("SqlListDelimiter"),
-    readStR("SqlListType"),
-    readStR("Transient"),
+    StR("Aliases"),
+    StR("Calculated"),
+    StR("Cardinality"),
+    StR("ClientName"),
+    StR("Collection"),
+    StR("ComputeLocalOnly"),
+    StR("Deferred"),
+    StR("Deprecated"),
+    StR("Final"),
+    StR("Identity"),
+    StR("InitialExpression"),
+    StR("Internal"),
+    StR("Inverse"),
+    StR("MultiDimensional"),
+    StR("OnDelete"),
+    StR("Private"),
+    StR("ReadOnly"),
+    StR("Required"),
+    StR("ServerOnly"),
+    StR("SqlColumnNumber"),
+    StR("SqlComputeCode"),
+    StR("SqlComputed"),
+    StR("SqlComputeOnChange"),
+    StR("SqlFieldName"),
+    StR("SqlListDelimiter"),
+    StR("SqlListType"),
+    StR("Transient"),
 ))
 const methodAnnKeywords = annKeywords(alt(
-    readStR("Abstract"),
-    readStR("ClientName"),
-    readStR("CodeMode"),
-    readStR("Deprecated"),
-    readStR("ExternalProcName"),
-    readStR("Final"),
-    readStR("ForceGenerate"),
-    readStR("GenerateAfter"),
-    readStR("Internal"),
-    readStR("Language"),
-    readStR("NotInheritable"),
-    readStR("PlaceAfter"),
-    readStR("Private"),
-    readStR("ProcedureBlock"),
-    readStR("PublicList"),
-    readStR("Requires"),
-    readStR("ReturnResultsets"),
-    readStR("ServerOnly"),
-    readStR("SoapAction"),
-    readStR("SoapBindingStyle"),
-    readStR("SoapBodyUse"),
-    readStR("SoapMessageName"),
-    readStR("SoapNameSpace"),
-    readStR("SoapRequestMessage"),
-    readStR("SoapTypeNameSpace"),
-    readStR("SqlName"),
-    readStR("SqlProc"),
-    readStR("WebMethod"),
+    StR("Abstract"),
+    StR("ClientName"),
+    StR("CodeMode"),
+    StR("Deprecated"),
+    StR("ExternalProcName"),
+    StR("Final"),
+    StR("ForceGenerate"),
+    StR("GenerateAfter"),
+    StR("Internal"),
+    StR("Language"),
+    StR("NotInheritable"),
+    StR("PlaceAfter"),
+    StR("Private"),
+    StR("ProcedureBlock"),
+    StR("PublicList"),
+    StR("Requires"),
+    StR("ReturnResultsets"),
+    StR("ServerOnly"),
+    StR("SoapAction"),
+    StR("SoapBindingStyle"),
+    StR("SoapBodyUse"),
+    StR("SoapMessageName"),
+    StR("SoapNameSpace"),
+    StR("SoapRequestMessage"),
+    StR("SoapTypeNameSpace"),
+    StR("SqlName"),
+    StR("SqlProc"),
+    StR("WebMethod"),
 ))
 const memberAnnKeywords = annKeywords(name)
 
 const parameterAnnOutput = alt(
-    seqFlatten(readStR("Output"), gap1),
-    seqFlatten(readStR("ByRef"), gap1),
+    seqFlatten(StR("Output"), gap1),
+    seqFlatten(StR("ByRef"), gap1),
 )
 const parameterAnnEq = seqFlatten(
-    gap, readStr("="), gap, balanced
+    gap, str("="), gap, balanced
 )
 const parameter = seqFlatten(
     optional(parameterAnnOutput), name, optional(asType), optional(parameterAnnEq)
@@ -221,7 +221,7 @@ const ancestor = alt(
 );
 
 const annExtends = map(
-    seq(gap1, readStR("extends"), gap1, ancestor),
+    seq(gap1, StR("extends"), gap1, ancestor),
     (parts) => new Extends(...parts)
 )
 
@@ -229,17 +229,17 @@ const mParameterLike = map(
     seqDrop2(
         seq(
             alt(
-                readStR("parameter"),
-                readStR("property"),
-                readStR("projection"),
-                readStR("index"),
-                readStR("relationship"),
+                StR("parameter"),
+                StR("property"),
+                StR("projection"),
+                StR("index"),
+                StR("relationship"),
             ),
             gap1,
             name,
-            readWhile((x) => x !== ";"),
+            strWhile((x) => x !== ";"),
         ),
-        readStr(";")
+        str(";")
     ),
     (parts) => {
         return new PropertyLikeMember(...parts)
@@ -249,13 +249,13 @@ const mParameterLike = map(
 const mForeignKey = map(
     seqDrop2(
         seq(
-            readStR("foreignkey"),
+            StR("foreignkey"),
             gap1,
             name,
             filter(nameList, (ns) => ns.length > 0),
             seqFlatten(
                 gap1,
-                readStR("References"),
+                StR("References"),
                 gap1,
             ),
             name,
@@ -271,7 +271,7 @@ const mForeignKey = map(
             ),
             memberAnnKeywords,
         ),
-        readStr(";")
+        str(";")
     ),
     (parts) => {
         return new ForeignKeyLikeMember(...parts)
@@ -281,8 +281,8 @@ const mForeignKey = map(
 const mXData = map(
     seq(
         alt(
-            readStR("xdata"),
-            readStR("storage")
+            StR("xdata"),
+            StR("storage")
         ),
         gap1,
         name,
@@ -301,7 +301,7 @@ const mXData = map(
 
 const mTrigger = map(
     seq(
-        readStR("trigger"),
+        StR("trigger"),
         gap1,
         name,
         optional(memberAnnKeywords),
@@ -315,10 +315,10 @@ const mMethodBody = seqDrop13('{', balanced, '}')
 const mMethodLike = map(
     seq(
         alt(
-            readStR("trigger"),
-            readStR("method"),
-            readStR("classmethod"),
-            readStR("query")
+            StR("trigger"),
+            StR("method"),
+            StR("classmethod"),
+            StR("query")
         ),
         gap1,
         name,
@@ -344,7 +344,6 @@ const memberWithComment = map(
 )
 const members = repeatSep(gap, memberWithComment)
 const memberList = seqDrop13("{", members, "}")
-
 const document = map(
     seqDrop2(
         seq(
@@ -353,7 +352,7 @@ const document = map(
             gap,
             dComment,
             gap,
-            readStR("class"),
+            StR("class"),
             gap1,
             name,
             optional(annExtends),

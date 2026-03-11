@@ -85,9 +85,9 @@ export const fail: Parser<never> =
     withReader((_) => [].values())
 export const eof = <T>(value: T) =>
     withReader((reader) => (reader.atEnd() ? succ(value) : fail)(reader))
-export const read = (n: number = 1) =>
+export const strN = (n: number = 1) =>
     withReader((reader) => reader.read(n))
-export const readWhile = (p: (x: string) => boolean = (_) => true) =>
+export const strWhile = (p: (x: string) => boolean = (_) => true) =>
     withReader((reader) => reader.readWhile(p))
 export const bind = <X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>) =>
     withReader((reader) => p(reader).flatMap(({ reader, value }) => f(value)(reader)))
@@ -100,20 +100,21 @@ export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
     return bind(p, (x) => f(x) ? succ(x) : fail)
 }
 
-export function readIf(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
-    return filter(read(n), p)
+export function strIf(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
+    return filter(strN(n), p)
 }
 
-export function readStr<T extends string>(x: T): Parser<T> {
-    return readIf(x.length, (y) => y === x) as Parser<T>;
+export function str<T extends string>(x: T): Parser<T> {
+    return strIf(x.length, (y) => y === x) as Parser<T>;
 }
 
-export function readStR<T extends string>(x: T): Parser<T> {
-    return readIf(x.length, (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase()) as Parser<T>;
+// case-insensitive version
+export function StR<T extends string>(x: T): Parser<T> {
+    return strIf(x.length, (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase()) as Parser<T>;
 }
 
-export function readWhile1(p: (x: string) => boolean = (_) => true): Parser<string> {
-    return filter(readWhile(p), (x) => x.length > 0)
+export function strWhile1(p: (x: string) => boolean = (_) => true): Parser<string> {
+    return filter(strWhile(p), (x) => x.length > 0)
 }
 
 export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
@@ -144,7 +145,7 @@ export function repeatSep<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]
     )
 }
 export const repeatSepWithStr = <T>(x: Parser<T>, s: string) =>
-    drop2(repeatSep(x, readStr(s)))
+    drop2(repeatSep(x, str(s)))
 
 export const once = <T>(p: Parser<T>) =>
     withReader((reader) => p(reader).take(1))
@@ -198,7 +199,7 @@ export function seqDrop2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
 }
 
 export function seqDrop13<T>(p1: string, p2: Parser<T>, p3: string): Parser<T> {
-    return drop13(seq(readStr(p1), p2, readStr(p3)))
+    return drop13(seq(str(p1), p2, str(p3)))
 }
 
 export function seqDrop15<T1, T2, T3, T4, T5>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>): Parser<[T2, T3, T4]> {
