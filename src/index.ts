@@ -1,5 +1,5 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { anythingBalanced as anyBalanced, readWhile as readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, oneOff as once, Reader, readWhile1 as readWhile1, repeat, repeat1, repeatSep, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15, seqDrop2 } from "./langspec.js";
+import { anythingBalanced as anyBalanced, readWhile as readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once as once, Reader, readWhile1 as readWhile1, repeat, repeat1, repeatSep, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15, seqDrop2 } from "./langspec.js";
 import { optional } from "./alt.js";
 import { alt } from "./alt.js";
 import { seq } from "./seq.js";

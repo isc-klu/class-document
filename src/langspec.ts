@@ -144,7 +144,7 @@ export function repeatSep<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]
     )
 }
 
-export const oneOff = <T>(p: Parser<T>): Parser<T> => {
+export const once = <T>(p: Parser<T>): Parser<T> => {
     function* g(reader: Reader) {
         for (const x of p(reader)) {
             yield x;
@@ -198,7 +198,7 @@ export const drop2 = <T1, T2>(p: Parser<[T1, T2]>) => {
 
 
 export const doubleQuotedContent = flatten(
-    oneOff(repeat(alt(
+    once(repeat(alt(
         // backslash followed by anything but newline
         readIf(2, (s) => /\\[^\n]/.test(s)),
         // anything but double quote or slash or newline
@@ -206,7 +206,7 @@ export const doubleQuotedContent = flatten(
     )))
 )
 export const singleQuotedContent = flatten(
-    oneOff(repeat(alt(
+    once(repeat(alt(
         // backslash followed by anything but newline
         readIf(2, (s) => /\\[^\n]/.test(s)),
         // anything but double quote or slash or newline
@@ -220,7 +220,7 @@ export const singleLineString = alt(
 export const anythingBalanced: Parser<string> = rec(() => flatten(
     repeat(
         alt(
-            oneOff(readWhile1((c) => /[^()\[\]\{\}<>"']/.test(c))),
+            once(readWhile1((c) => /[^()\[\]\{\}<>"']/.test(c))),
             singleLineString,
             seqFlatten(readStr('('), anythingBalanced, readStr(')')),
             seqFlatten(readStr('['), anythingBalanced, readStr(']')),
