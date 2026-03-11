@@ -1,13 +1,13 @@
 import { alt, optional } from "./alt.js";
 import { seq } from "./seq.js";
-import { bind, fail, strN, strWhile, succ, type Parser } from "./core.js";
+import { fail, strN, strWhile, succ, type Parser } from "./core.js";
 
 export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
-    return bind(p, (x) => succ(f(x)))
+    return p.bind((x) => succ(f(x)))
 }
 
 export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
-    return bind(p, (x) => f(x) ? succ(x) : fail)
+    return p.bind((x) => f(x) ? succ(x) : fail)
 }
 
 export function strIf(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
@@ -30,7 +30,7 @@ export function strWhile1(p: (x: string) => boolean = (_) => true): Parser<strin
 const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
     alt(repeat1WithAcc(xs, x), succ(xs))
 const repeat1WithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
-    bind(x, (xv) => repeatWithAcc([...xs, xv], x))
+    x.bind((xv) => repeatWithAcc([...xs, xv], x))
 
 export const repeat = <T>(x: Parser<T>) => repeatWithAcc([], x)
 export const repeat1 = <T>(x: Parser<T>) => repeat1WithAcc([], x)

@@ -68,16 +68,19 @@ export interface Result<T> {
 
 export type ResultSet<T> = IteratorObject<Result<T>, void>;
 
-export class Parser<T> {
-    private readonly f: (reader: Reader) => ResultSet<T>;
-    constructor(f: Parser<T>["f"]) {
+export class Parser<A> {
+    private readonly f: (reader: Reader) => ResultSet<A>;
+    constructor(f: Parser<A>["f"]) {
         this.f = f
     }
     proceed(reader: Reader) {
         return this.f(reader)
     }
-    exec(source: string, n: number = 1) {
+    public exec(source: string, n: number = 1) {
         return [...this.proceed(new Reader(source)).take(n)];
+    }
+    public bind<B>(f: (x: A) => Parser<B>) {
+        return withReader((reader) => this.proceed(reader).flatMap(({ reader, value }) => f(value).proceed(reader)))
     }
 }
 
@@ -86,8 +89,6 @@ function withReader<T>(f: (_: Reader) => ResultSet<T>): Parser<T> {
         yield* f(reader);
     });
 }
-
-export const bind = <X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>) => withReader((reader) => p.proceed(reader).flatMap(({ reader, value }) => f(value).proceed(reader)));
 
 export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => new Parser((x: Reader) => lazyP().proceed(x));
 export const once = <T>(p: Parser<T>): Parser<T> => withReader((reader) => p.proceed(reader).take(1));
