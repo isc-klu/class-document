@@ -1,5 +1,6 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { strWhile, eof, strIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, str, StR, map, once, Reader, strWhile1, repeat, repeat1, repeatSep, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, isLetter, filter, dbg, type Parser, exec } from "./langspec/index.js";
+import { strWhile, eof, strIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, str, StR, map, strWhile1, repeat, repeat1, repeatSep, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, filter } from "./langspec/index.js";
+import { once, type Parser, exec } from "./langspec/core.js";
 import { balanced, balancedElement, simpleString, word } from "./langspec/pl.js";
 import { alt, optional } from "./langspec/alt.js";
 import { seq } from "./langspec/seq.js";

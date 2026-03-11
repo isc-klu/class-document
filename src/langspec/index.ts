@@ -1,101 +1,17 @@
 import { alt, optional } from "./alt.js";
 import { seq } from "./seq.js";
-
-export interface SrcLoc {
-    line: number;
-    char: number;
-    absolute: number;
-}
-
-export class Reader {
-    private readonly content: string;
-    private readonly srcloc: SrcLoc;
-
-    constructor(content: string, srcloc: SrcLoc = { line: 0, char: 0, absolute: 0 }) {
-        this.content = content;
-        this.srcloc = srcloc;
-    }
-
-    public location(): SrcLoc {
-        return Object.assign({}, this.srcloc)
-    }
-
-    public * read(n: number = 1): ResultSet<string> {
-        let { line, char, absolute } = this.srcloc;
-        absolute += n;
-        if (absolute > this.content.length) {
-            return
-        }
-        for (; n > 0; n--) {
-            if (this.content[absolute] === "\n") {
-                line += 1;
-                char = 0;
-            } else {
-                char += 1;
-            }
-        }
-        yield {
-            reader: new Reader(this.content, { line, char, absolute }),
-            value: this.content.slice(this.srcloc.absolute, absolute)
-        };
-    }
-
-    public * readWhile(f: (_: string) => boolean): ResultSet<string> {
-        let { line, char, absolute } = this.srcloc;
-        for (; absolute < this.content.length; absolute++) {
-            if (!f(this.content[absolute]!)) {
-                break
-            }
-            if (this.content[absolute] === "\n") {
-                line += 1;
-                char = 0;
-            } else {
-                char += 1;
-            }
-        }
-        yield {
-            reader: new Reader(this.content, { line, char, absolute }),
-            value: this.content.slice(this.srcloc.absolute, absolute)
-        };
-    }
-
-    public atEnd(): boolean {
-        return this.content.length === this.srcloc.absolute
-    }
-}
-
-export interface Result<T> {
-    reader: Reader,
-    value: T,
-}
-
-export type ResultSet<T> = IteratorObject<Result<T>, void>;
-
-export type Parser<T> = (reader: Reader) => ResultSet<T>
-
-export function withReader<T>(f: (_: Reader) => ResultSet<T>): Parser<T> {
-    return function* (reader: Reader) {
-        yield* f(reader)
-    }
-}
+import { withReader, type Parser, bind } from "./core.js";
 
 export const succ = <T>(value: T) =>
     withReader((reader) => [{ reader, value}].values())
 export const fail: Parser<never> =
     withReader((_) => [].values())
 export const eof = <T>(value: T) =>
-    withReader((reader) => (reader.atEnd() ? succ(value) : fail)(reader))
+    withReader((reader) => (reader.atEnd() ? [{ reader, value }] : []).values())
 export const strN = (n: number = 1) =>
     withReader((reader) => reader.read(n))
 export const strWhile = (p: (x: string) => boolean = (_) => true) =>
     withReader((reader) => reader.readWhile(p))
-export const bind = <X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>) =>
-    withReader((reader) => p(reader).flatMap(({ reader, value }) => f(value)(reader)))
-export const rec = <T>(lazyP: () => Parser<T>) => 
-    (x: Reader) => lazyP()(x)
-
-export const once = <T>(p: Parser<T>) =>
-    withReader((reader) => p(reader).take(1))
 
 export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
     return bind(p, (x) => succ(f(x)))
@@ -155,10 +71,6 @@ export const isSpace = (x: string) => /[\p{Z}\p{C}]/u.test(x)
 export const isChar = (x: string) => x.length === 1
 export const isButNL = (x: string) => /[^\n]/.test(x)
 export const isSpaceButNL = (x: string) => /[\t\r ]/.test(x)
-
-export function exec<T>(p: Parser<T>, source: string, n: number = 1) {
-    return [...p(new Reader(source)).take(n)]
-}
 
 export const flatten = (p: Parser<string[]>): Parser<string> => {
     return map(p, ((xs: string[]) => xs.join("")))

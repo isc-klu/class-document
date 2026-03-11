@@ -1,6 +1,6 @@
 import { alt } from "./alt.js";
-import { flatten, once, repeat, strIf, seqFlatten, str, type Parser, rec, strWhile1, isLetter, isNumeral, isSymbol, repeat1, isSpace, repeatSep, strWhile, map, withReader, bind } from "./index.js";
-import { seq } from "./seq.js";
+import { flatten, repeat, strIf, seqFlatten, str, strWhile1, isLetter, isNumeral, isSymbol, repeat1, isSpace } from "./index.js";
+import { once, type Parser, rec } from "./core.js";
 
 
 export const doubleQuotedContent = flatten(
