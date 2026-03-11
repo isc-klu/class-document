@@ -12,7 +12,11 @@ export class Dependency {
     }
 
     toString(): string {
-        return `${this.keyword}${this.space}${this.content}`
+        return (
+            this.keyword +
+            this.space +
+            this.content
+        );
     }
 }
 
@@ -95,7 +99,7 @@ export abstract class Member {
     abstract toString(): string
 }
 
-export class PropertyLikeMember extends Member{
+export class PropertyLikeMember extends Member {
     content: string;
     constructor(keyword: string, gapKeywordName: string, name: string, gapNameContent: string, content: string) {
         super(keyword, gapKeywordName, name, gapNameContent);
@@ -103,11 +107,17 @@ export class PropertyLikeMember extends Member{
     }
 
     toString(): string {
-        return `${this.keyword}${this.gapKeywordName}${this.name}${this.gapNameContent}${this.content}`
+        return (
+            this.keyword +
+            this.gapKeywordName +
+            this.name +
+            this.gapNameContent +
+            this.content
+        );
     }
 }
 
-export class XDataLikeMember extends Member{
+export class XDataLikeMember extends Member {
     keywords: null | string[];
     gapKeywordsBegin: string;
     content: string;
@@ -170,7 +180,7 @@ export class Document {
             (this.keywords === null ? "" : '[' + this.keywords.join(',') + ']') + this.gapKeywordsBegin +
             "{" +
             this.members.map((x) => x.toString()).join("") +
-            "aftermembers" + 
+            "aftermembers" +
             this.content);
     }
 }
@@ -210,7 +220,7 @@ function parseMember(reader: Reader): Member | null {
         case "query":
             return null;
         case "xdata":
-        case "storage":{
+        case "storage": {
             const gapKeywordName = parseProperGap(reader);
             const name = parseName(reader);
             const gapNameKeywords = parseWhitespace(reader);
@@ -228,7 +238,7 @@ function parseMember(reader: Reader): Member | null {
 function parsePropertyLikeMember(reader: Reader): string {
     const regex = /[^;]*/yi;
     regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source) as [ string ];
+    const maybeMatch = regex.exec(reader.source) as [string];
     const [full] = maybeMatch
     reader.advance(full.length);
     return full;
@@ -237,12 +247,12 @@ function parsePropertyLikeMember(reader: Reader): string {
 function parseXDataLikeMember(reader: Reader): string {
     const regex = /(.*?)\n}/ys;
     regex.lastIndex = reader.i();
-    const maybeMatch = regex.exec(reader.source) as [ string ];
+    const maybeMatch = regex.exec(reader.source) as [string];
     if (maybeMatch === null) {
         throw reader.expecting("XData followed by a stand-alone '}'")
     }
     let [full] = maybeMatch
-    full = full.slice(0, full.length-2)
+    full = full.slice(0, full.length - 2)
     reader.advance(full.length);
     // console.log(JSON.stringify(full))
     return full;

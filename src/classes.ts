@@ -10,7 +10,11 @@ export class Dependency {
     }
 
     toString(): string {
-        return `${this.keyword}${this.space}${this.content}`;
+        return (
+            this.keyword +
+            this.space +
+            this.content
+        );
     }
 }
 
@@ -114,7 +118,12 @@ export class PropertyLikeMember extends Member {
 
     toString(): string {
         return this.addDescription(
-            `${this.keyword}${this.gapKeywordName}${this.name}${this.gapNameContent}${this.content};`
+            this.keyword +
+            this.gapKeywordName +
+            this.name +
+            this.gapNameContent +
+            this.content +
+            ";"
         );
     }
 }
