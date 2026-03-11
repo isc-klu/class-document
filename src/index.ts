@@ -103,64 +103,68 @@ const annExtends = map(
 )
 
 const mPropertyLike = map(
-    seq(
-        dComment,
-        space,
-        alt(...[
-            "parameter",
-            "property",
-            "projection",
-            "index",
-            "foreignkey",
-            "relationship",
-        ].map(LiTeRaL)),
-        space1,
-        name,
-        readWhile((x) => x !== ";"),
+    seqDrop2(
+        seq(
+            dComment,
+            space,
+            alt(
+                LiTeRaL("parameter"),
+                LiTeRaL("property"),
+                LiTeRaL("projection"),
+                LiTeRaL("index"),
+                LiTeRaL("foreignkey"),
+                LiTeRaL("relationship"),
+            ),
+            space1,
+            name,
+            readWhile((x) => x !== ";"),
+        ),
         literal(";")
     ),
-    ([description, gap0, keyword, gap1, name, content, _]) => {
-        return new PropertyLikeMember(description, gap0, keyword, gap1, name, content)
+    (parts) => {
+        return new PropertyLikeMember(...parts)
     }
 )
 
 const mForeignKey = map(
-    seq(
-        dComment,
-        space,
-        LiTeRaL("foreignkey"),
-        space1,
-        name,
-        nameList,
-        space1,
-        readWhile((x) => x !== ";"),
+    seqDrop2(
+        seq(
+            dComment,
+            space,
+            LiTeRaL("foreignkey"),
+            space1,
+            name,
+            nameList,
+            space1,
+            readWhile((x) => x !== ";"),
+        ),
         literal(";")
     ),
-    ([description, gap0, keyword, gap1, name, ids, gap2, content, _]) => {
-        return new ForeignKeyLikeMember(description, gap0, keyword, gap1, name, ids, gap2, content)
+    (parts) => {
+        return new ForeignKeyLikeMember(...parts)
     }
 )
 
 const mXData = map(
     seq(
-        seq(
-            dComment,
-            space,
-            alt(
-                LiTeRaL("xdata"),
-                LiTeRaL("storage")
-            ),
-            space1,
-            name,
-            optional(annKeywords, null),
-            space,
+        dComment,
+        space,
+        alt(
+            LiTeRaL("xdata"),
+            LiTeRaL("storage")
         ),
-        literal('{'),
-        anyBalanced,
-        literal('}')
+        space1,
+        name,
+        optional(annKeywords, null),
+        space,
+        seqDrop13(
+            literal('{'),
+            anyBalanced,
+            literal('}')
+        )
     ),
-    ([head, _1, body, _2]) => {
-        return new XDataLikeMember(...head, body)
+    (parts) => {
+        return new XDataLikeMember(...parts)
     }
 )
 
@@ -178,21 +182,6 @@ const mTrigger = map(
     (parts) => new TriggerLikeMember(...parts)
 )
 
-const mMethodSignature = seq(
-    dComment,
-    space,
-    alt(
-        LiTeRaL("trigger"),
-        LiTeRaL("method"),
-        LiTeRaL("classmethod"),
-        LiTeRaL("query"),
-    ),
-    space1,
-    name,
-    space,
-    parameterList,
-    optional(asType, ""),
-)
 const mMethodBody = seqDrop13(
     literal('{'),
     anyBalanced,
@@ -200,24 +189,31 @@ const mMethodBody = seqDrop13(
 )
 const mMethodLike = map(
     seq(
-        mMethodSignature,
+        dComment,
+        space,
+        alt(
+            LiTeRaL("trigger"),
+            LiTeRaL("method"),
+            LiTeRaL("classmethod"),
+            LiTeRaL("query")
+        ),
+        space1,
+        name,
+        space,
+        parameterList,
+        optional(asType, ""),
         optional(annKeywords),
         space,
         mMethodBody
     ),
-    ([h1, h2, h3, body]) => {
-        return new MethodLikeMember(...h1, h2, h3, body)
+    (parts) => {
+        return new MethodLikeMember(...parts)
     }
 )
 
 const member = alt<Member>(mPropertyLike, mForeignKey, mXData, mTrigger, mMethodLike)
 const members = repeatSep(space, member)
-const memberList: Parser<[string[], Member[]]> =
-    seqDrop13(
-        literal("{"),
-        members,
-        literal("}"),
-    )
+const memberList = seqDrop13(literal("{"), members, literal("}"))
 
 const document = map(
     seqDrop2(
