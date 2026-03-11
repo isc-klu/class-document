@@ -113,9 +113,9 @@ export class PropertyLikeMember extends Member {
 }
 
 export class ForeignKeyLikeMember extends Member {
-    ids: [string[], string[]];
+    ids: [string, string, string][];
     content: string;
-    constructor(description: Description, gapDescKeyword: string, keyword: string, gapKeywordName: string, name: string, ids: [string[], string[]], gapNameContent: string, content: string) {
+    constructor(description: Description, gapDescKeyword: string, keyword: string, gapKeywordName: string, name: string, ids: [string, string, string][], gapNameContent: string, content: string) {
         super(description, gapDescKeyword, keyword, gapKeywordName, name, gapNameContent);
         this.ids = ids;
         this.content = content;
@@ -129,7 +129,7 @@ export class ForeignKeyLikeMember extends Member {
             this.gapKeywordName +
             this.name +
             '(' +
-            this.ids[0].map((id, i) => (this.ids[1][i - 1] ?? "") + id).join("") +
+            this.ids.map(([s1, x, s2]) => s1 + x + s2).join(",") +
             ')' +
             this.gapNameContent +
             this.content +

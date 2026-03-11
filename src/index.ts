@@ -55,6 +55,22 @@ const nameList = seqDrop13(
     literal("("), drop2(repeatSep(nameWithPad, literal(","))), literal(")")
 )
 
+const keywordValue = seqFlatten(space, literal("="), space, anyBalanced)
+const keyword =
+    altN(
+        flatten(seq(name, optional(keywordValue, ""))),
+        flatten(seq(LiTeRaL("Not"), space1, name))
+    )
+const keywordWithPad = seq(space, keyword, space);
+const keywords = drop2(repeatSep(keywordWithPad, literal(",")));
+const keywordList = seqDrop13(literal("["), keywords, literal("]"));
+
+const annKeywords = map(
+    seq(space, keywordList),
+    (parts) => new Keywords(...parts)
+)
+
+
 const classExtendsValue = altN(
     name,
     nameList
@@ -62,25 +78,6 @@ const classExtendsValue = altN(
 const classExtends = map(
     seq(space1, LiTeRaL("extends"), space1, classExtendsValue),
     (parts) => new Extends(...parts)
-)
-
-const keywordValue = map(seq(space, literal("="), space, anyBalanced), join)
-const keyword =
-    altN(
-        flatten(seq(name, optional(keywordValue, ""))),
-        flatten(seq(LiTeRaL("Not"), space1, name))
-    )
-const keywordWithPad = seq(space, keyword, space);
-const keywords = map(
-    seq(
-        space,
-        seqDrop13(
-                literal("["),
-                drop2(repeatSep(keywordWithPad, literal(","))),
-                literal("]")
-        )
-    ),
-    (parts) => new Keywords(...parts)
 )
 
 const mPropertyLike = map(
@@ -112,7 +109,7 @@ const mForeignKey = map(
         LiTeRaL("foreignkey"),
         space1,
         name,
-        map(seq(literal('('), repeatSep(name, seqFlatten(space, literal(","), space)), literal(')')), ([_1, ids, _2]) => ids),
+        nameList,
         space1,
         readWhile((x) => x !== ";"),
         literal(";")
@@ -133,7 +130,7 @@ const mXData = map(
             ),
             space1,
             name,
-            optional(keywords, null),
+            optional(annKeywords, null),
             space,
         ),
         literal('{'),
@@ -152,7 +149,7 @@ const mTrigger = map(
         LiTeRaL("trigger"),
         space1,
         name,
-        optional(keywords),
+        optional(annKeywords),
         space,
         drop13(seq(literal('{'), anyBalanced, literal('}')))
     ),
@@ -202,7 +199,7 @@ const mMethodBody = seqDrop13(
 const mMethodLike = map(
     seq(
         mMethodSignature,
-        optional(keywords),
+        optional(annKeywords),
         space,
         mMethodBody
     ),
@@ -238,7 +235,7 @@ const document = map(
             space1,
             name,
             optional(classExtends),
-            optional(keywords),
+            optional(annKeywords),
             space,
         ),
         documentBlock,
