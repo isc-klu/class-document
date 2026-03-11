@@ -1,5 +1,6 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { anyBalanced, readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once, Reader, readWhile1, repeat, repeat1, repeatSep, simpleString, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr } from "./langspec/index.js";
+import { readWhile, eof, readIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once, Reader, readWhile1, repeat, repeat1, repeatSep, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, isLetter, filter, dbg, type Parser } from "./langspec/index.js";
+import { balanced, balancedElement, simpleString } from "./langspec/pl.js";
 import { alt, optional } from "./langspec/alt.js";
 import { seq } from "./langspec/seq.js";
 
@@ -23,17 +24,17 @@ const lCommentContent = alt(
 );
 const lComment = flatten(seq(lCommentHead, lCommentContent, readStr("\n")))
 
-const spaceElem = once(alt(
+const gapElem = once(alt(
     readWhile1(isSpace),
     lComment,
     rComment,
 ));
-const space = flatten(repeat(spaceElem));
-const space1 = flatten(repeat1(spaceElem));
+const gap = flatten(repeat(gapElem));
+const gap1 = flatten(repeat1(gapElem));
 
 const dependencyKeyword = alt(readStR("import"), readStR("include"), readStR("includegenerator"));
 const dependency = map(
-    seq(dependencyKeyword, space1, readWhile1(isButNL)),
+    seq(dependencyKeyword, gap1, readWhile1(isButNL)),
     (parts) => new Dependency(...parts)
 );
 const dependencies = repeat(dependency);
@@ -46,50 +47,168 @@ const dComment = map(
     (parts) => new Description(parts),
 )
 
-const symbol = once(readWhile1((c) => isAlPhA(c) || isNumeral(c) || c === "%" || c === "." || c === "_"))
+const symbol = once(readWhile1((c) => isLetter(c) || isNumeral(c) || c === "%" || c === "." || c === "_"))
 const name = alt(
     symbol,
     simpleString
 )
-const nameWithPad = seq(space, name, space)
 
+const value = flatten(once(repeat1(alt(
+    balancedElement,
+    readStr("/"),
+    readStr("_"),
+    readStr("-"),
+    readStr("."),
+    readStr("%")
+))));
+
+const nameWithPad = seq(gap, name, gap)
 const nameList = seqDrop13(
     readStr("("), repeatSepWithStr(nameWithPad, ","), readStr(")")
 )
 
-const clsType = anyBalanced
+const typeParamWithPad = seqFlatten(gap, value, gap, readStr("="), gap, value, gap)
+const typeParamList = seqFlatten(
+    readStr("("), map(repeatSepWithStr(typeParamWithPad, ","), (xs) => xs.join(",")), readStr(")")
+)
+const clsType = seqFlatten(
+    value,
+    optional(
+        seqFlatten(
+            gap,
+            typeParamList
+        ),
+        ""
+    )
+)
 
 const asType = seqFlatten(
-    space, readStR("as"), space, clsType
+    gap, readStR("as"), gap, clsType
 )
 
-const keywordValue = seqFlatten(space, readStr("="), space, anyBalanced)
-const keyword =
-    alt(
-        flatten(seq(name, optional(keywordValue, ""))),
-        flatten(seq(readStR("Not"), space1, name))
+const annKeywords = (keywordName: Parser<string>) => {
+    const keywordValueAnn = seqFlatten(gap, readStr("="), gap, value)
+    const keywordClause =
+        alt(
+            flatten(seq(keywordName, optional(keywordValueAnn, ""))),
+            flatten(seq(readStR("Not"), gap1, keywordName))
+        )
+    const keywordWithPad = seq(gap, keywordClause, gap);
+    const keywords = alt(repeatSepWithStr(keywordWithPad, ","), gap);
+    const keywordList = seqDrop13(readStr("["), keywords, readStr("]"));
+    const annKeywords = map(
+        seq(gap, keywordList),
+        (parts) => new Keywords(...parts)
     )
-const keywordWithPad = seq(space, keyword, space);
-const keywords = repeatSepWithStr(keywordWithPad, ",");
-const keywordList = seqDrop13(readStr("["), keywords, readStr("]"));
+    return annKeywords
+}
 
-const annKeywords = map(
-    seq(space, keywordList),
-    (parts) => new Keywords(...parts)
-)
+const classAnnKeywords = annKeywords(alt(
+    readStR("Abstract"),
+    readStR("ClassType"),
+    readStR("ClientDataType"),
+    readStR("ClientName"),
+    readStR("CompileAfter"),
+    readStR("DdlAllowed"),
+    readStR("DependsOn"),
+    readStR("Deprecated"),
+    readStR("Final"),
+    readStR("GeneratedBy"),
+    readStR("Hidden"),
+    readStR("Inheritance"),
+    readStR("Language"),
+    readStR("LegacyInstanceContext"),
+    readStR("NoExtent"),
+    readStR("OdbcType"),
+    readStR("Owner"),
+    readStR("ProcedureBlock"),
+    readStR("PropertyClass"),
+    readStR("ServerOnly"),
+    readStR("Sharded"),
+    readStR("SoapBindingStyle"),
+    readStR("SoapBodyUse"),
+    readStR("SqlCategory"),
+    readStR("SqlRowIdName"),
+    readStR("SqlRowIdPrivate"),
+    readStR("SqlTableName"),
+    readStR("StorageStrategy"),
+    readStR("System"),
+    readStR("ViewQuery")
+));
+
+const propertyAnnKeywords = annKeywords(alt(
+    readStR("Aliases"),
+    readStR("Calculated"),
+    readStR("Cardinality"),
+    readStR("ClientName"),
+    readStR("Collection"),
+    readStR("ComputeLocalOnly"),
+    readStR("Deferred"),
+    readStR("Deprecated"),
+    readStR("Final"),
+    readStR("Identity"),
+    readStR("InitialExpression"),
+    readStR("Internal"),
+    readStR("Inverse"),
+    readStR("MultiDimensional"),
+    readStR("OnDelete"),
+    readStR("Private"),
+    readStR("ReadOnly"),
+    readStR("Required"),
+    readStR("ServerOnly"),
+    readStR("SqlColumnNumber"),
+    readStR("SqlComputeCode"),
+    readStR("SqlComputed"),
+    readStR("SqlComputeOnChange"),
+    readStR("SqlFieldName"),
+    readStR("SqlListDelimiter"),
+    readStR("SqlListType"),
+    readStR("Transient"),
+))
+const methodAnnKeywords = annKeywords(alt(
+    readStR("Abstract"),
+    readStR("ClientName"),
+    readStR("CodeMode"),
+    readStR("Deprecated"),
+    readStR("ExternalProcName"),
+    readStR("Final"),
+    readStR("ForceGenerate"),
+    readStR("GenerateAfter"),
+    readStR("Internal"),
+    readStR("Language"),
+    readStR("NotInheritable"),
+    readStR("PlaceAfter"),
+    readStR("Private"),
+    readStR("ProcedureBlock"),
+    readStR("PublicList"),
+    readStR("Requires"),
+    readStR("ReturnResultsets"),
+    readStR("ServerOnly"),
+    readStR("SoapAction"),
+    readStR("SoapBindingStyle"),
+    readStR("SoapBodyUse"),
+    readStR("SoapMessageName"),
+    readStR("SoapNameSpace"),
+    readStR("SoapRequestMessage"),
+    readStR("SoapTypeNameSpace"),
+    readStR("SqlName"),
+    readStR("SqlProc"),
+    readStR("WebMethod"),
+))
+const memberAnnKeywords = annKeywords(name)
 
 const parameterAnnOutput = alt(
-    seqFlatten(readStR("Output"), space1),
-    seqFlatten(readStR("ByRef"), space1),
+    seqFlatten(readStR("Output"), gap1),
+    seqFlatten(readStR("ByRef"), gap1),
 )
 const parameterAnnEq = seqFlatten(
-    space, readStr("="), space, anyBalanced
+    gap, readStr("="), gap, balanced
 )
 const parameter = seqFlatten(
     optional(parameterAnnOutput), name, optional(asType), optional(parameterAnnEq)
 )
-const parameterWithPad = seq(space, parameter, space)
-const parameters = repeatSepWithStr(parameterWithPad, ",");
+const parameterWithPad = seq(gap, parameter, gap)
+const parameters = once(repeatSepWithStr(parameterWithPad, ","));
 const parameterList = seqDrop13(readStr('('), parameters, readStr(')'))
 
 const ancestor = alt(
@@ -98,11 +217,11 @@ const ancestor = alt(
 );
 
 const annExtends = map(
-    seq(space1, readStR("extends"), space1, ancestor),
+    seq(gap1, readStR("extends"), gap1, ancestor),
     (parts) => new Extends(...parts)
 )
 
-const mPropertyLike = map(
+const mParameterLike = map(
     seqDrop2(
         seq(
             alt(
@@ -110,10 +229,9 @@ const mPropertyLike = map(
                 readStR("property"),
                 readStR("projection"),
                 readStR("index"),
-                readStR("foreignkey"),
                 readStR("relationship"),
             ),
-            space1,
+            gap1,
             name,
             readWhile((x) => x !== ";"),
         ),
@@ -128,11 +246,26 @@ const mForeignKey = map(
     seqDrop2(
         seq(
             readStR("foreignkey"),
-            space1,
+            gap1,
             name,
-            nameList,
-            space1,
-            readWhile((x) => x !== ";"),
+            filter(nameList, (ns) => ns.length > 0),
+            seqFlatten(
+                gap1,
+                readStR("References"),
+                gap1,
+            ),
+            name,
+            optional(
+                seqDrop13(
+                    seqFlatten(
+                        gap,
+                        readStr("(")
+                    ),
+                    name,
+                    readStr(")"),
+                )
+            ),
+            memberAnnKeywords,
         ),
         readStr(";")
     ),
@@ -147,13 +280,13 @@ const mXData = map(
             readStR("xdata"),
             readStR("storage")
         ),
-        space1,
+        gap1,
         name,
-        optional(annKeywords, null),
-        space,
+        optional(memberAnnKeywords, null),
+        gap,
         seqDrop13(
             readStr('{'),
-            anyBalanced,
+            balanced,
             readStr('}')
         )
     ),
@@ -165,18 +298,18 @@ const mXData = map(
 const mTrigger = map(
     seq(
         readStR("trigger"),
-        space1,
+        gap1,
         name,
-        optional(annKeywords),
-        space,
-        seqDrop13(readStr('{'), anyBalanced, readStr('}'))
+        optional(memberAnnKeywords),
+        gap,
+        seqDrop13(readStr('{'), balanced, readStr('}'))
     ),
     (parts) => new TriggerLikeMember(...parts)
 )
 
 const mMethodBody = seqDrop13(
     readStr('{'),
-    anyBalanced,
+    balanced,
     readStr('}')
 )
 const mMethodLike = map(
@@ -187,13 +320,13 @@ const mMethodLike = map(
             readStR("classmethod"),
             readStR("query")
         ),
-        space1,
+        gap1,
         name,
-        space,
+        gap,
         parameterList,
         optional(asType),
-        optional(annKeywords),
-        space,
+        optional(methodAnnKeywords),
+        gap,
         mMethodBody
     ),
     (parts) => {
@@ -201,33 +334,33 @@ const mMethodLike = map(
     }
 )
 
-const member = alt<Member>(mPropertyLike, mForeignKey, mXData, mTrigger, mMethodLike)
+const member = alt<Member>(mParameterLike, mForeignKey, mXData, mTrigger, mMethodLike)
 const memberWithComment = map(
-    seq(dComment, space, member),
+    seq(dComment, gap, member),
     ([description, gapDescriptionKeyword, member]) => {
         member.setDescription(description, gapDescriptionKeyword)
         return member
     }
 )
-const members = repeatSep(space, memberWithComment)
+const members = repeatSep(gap, memberWithComment)
 const memberList = seqDrop13(readStr("{"), members, readStr("}"))
 
 const document = map(
     seqDrop2(
         seq(
-            space,
+            gap,
             dependencies,
-            space,
+            gap,
             dComment,
-            space,
+            gap,
             readStR("class"),
-            space1,
+            gap1,
             name,
             optional(annExtends),
-            optional(annKeywords),
-            space,
+            optional(classAnnKeywords),
+            gap,
             memberList,
-            space,
+            gap,
         ),
         eof(null)
     ),
@@ -236,12 +369,7 @@ const document = map(
     }
 )
 
-export const parseDocument = (input: string): Document => {
+export const parseDocument = (input: string): Document | undefined => {
     const reader = new Reader(input);
-    const doc = take1(document(reader))
-    if (doc === null) {
-        throw new Error(`Can't parse document`);
-    } else {
-        return doc.value;
-    }
+    return take1(document(reader))?.value
 }

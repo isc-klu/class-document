@@ -51,9 +51,10 @@ export class Extends {
 
 export class Keywords {
     gapBefore: string;
-    keywords: [string, string, string][];
+    // String when the keywords is essentially empty -- need a string to describe the gap between []
+    keywords: [string, string, string][] | string;
 
-    constructor(gapBefore: string, keywords: [string, string, string][]) {
+    constructor(gapBefore: string, keywords: [string, string, string][] | string) {
         this.gapBefore = gapBefore;
         this.keywords = keywords;
     }
@@ -62,7 +63,11 @@ export class Keywords {
         return (
             this.gapBefore +
             '[' +
-            this.keywords.map(([s1, k, s2]) => s1 + k + s2).join(',') +
+            (
+                typeof this.keywords === "string"
+                ? this.keywords
+                : this.keywords.map(([s1, k, s2]) => s1 + k + s2).join(',')
+            ) +
             ']'
         );
     }
@@ -129,11 +134,24 @@ export class PropertyLikeMember extends Member {
 
 export class ForeignKeyLikeMember extends Member {
     ids: [string, string, string][];
-    content: string;
-    constructor(keyword: string, gapKeywordName: string, name: string, ids: [string, string, string][], gapNameContent: string, content: string) {
+    referencedClass: string;
+    refIndex: string | null;
+    keywordList: Keywords | null;
+    constructor(
+        keyword: string,
+        gapKeywordName: string,
+        name: string,
+        ids: [string, string, string][],
+        gapNameContent: string,
+        referencedClass: string,
+        refIndex: string | null,
+        keywordList: Keywords | null,
+    ) {
         super(keyword, gapKeywordName, name, gapNameContent);
         this.ids = ids;
-        this.content = content;
+        this.referencedClass = referencedClass;
+        this.refIndex = refIndex;
+        this.keywordList = keywordList;
     }
 
     toString(): string {
@@ -145,7 +163,9 @@ export class ForeignKeyLikeMember extends Member {
             this.ids.map(([s1, x, s2]) => s1 + x + s2).join(",") +
             ')' +
             this.gapNameContent +
-            this.content +
+            this.referencedClass + 
+            (this.refIndex === null ? "" : "(" + this.refIndex + ")") +
+            (this.keywordList === null ? "" : this.keywordList.toString()) +
             ';'
         );
     }
@@ -216,7 +236,7 @@ export class MethodLikeMember extends Member {
     content: string;
     gapNameParen: string;
     parameters: [string, string, string][];
-    typeAnn: string | null ;
+    typeAnn: string | null;
     constructor(
         keyword: string,
         gapKeywordName: string,

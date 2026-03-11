@@ -16,8 +16,8 @@ export class Reader {
         this.srcloc = srcloc;
     }
 
-    public charAt(n: number): string {
-        return this.content.charAt(this.srcloc.absolute + n);
+    public location(): SrcLoc {
+        return Object.assign({}, this.srcloc)
     }
 
     public * read(n: number = 1): ResultSet<string> {
@@ -149,15 +149,14 @@ export const repeatSepWithStr = <T>(x: Parser<T>, s: string) =>
 export const once = <T>(p: Parser<T>) =>
     withReader((reader) => p(reader).take(1))
 
+export const isLetter = (x: string) => /[\p{L}\p{M}]/u.test(x)
+export const isNumeral = (x: string) => /\p{N}/u.test(x)
+export const isSymbol = (x: string) => /[\p{S}\p{P}]/u.test(x)
+export const isSpace = (x: string) => /[\p{Z}\p{C}]/u.test(x)
+
 export const isChar = (x: string) => x.length === 1
 export const isButNL = (x: string) => /[^\n]/.test(x)
-export const isSpace = (x: string) => /\s/.test(x)
 export const isSpaceButNL = (x: string) => /[\t\r ]/.test(x)
-export const isAlpha = (x: string) => /[a-z]/.test(x)
-export const isALPHA = (x: string) => /[A-Z]/.test(x)
-export const isAlPhA = (x: string) => /[a-z]/i.test(x)
-export const isNumeral = (x: string) => /[0-9]/.test(x)
-
 
 export function take1<T>(r: ResultSet<T>): Result<T> | null {
     for (const o of r) {
@@ -190,40 +189,6 @@ export const drop2 = <T1, T2>(p: Parser<[T1, T2]>) => {
     return map(p, ([x, _]) => x)
 }
 
-
-export const doubleQuotedContent = flatten(
-    once(repeat(alt(
-        // backslash followed by anything but newline
-        readIf(2, (s) => /\\[^\n]/.test(s)),
-        // anything but double quote or slash or newline
-        readIf(1, (c) => /[^\\\n"]/.test(c)),
-    )))
-)
-export const singleQuotedContent = flatten(
-    once(repeat(alt(
-        // backslash followed by anything but newline
-        readIf(2, (s) => /\\[^\n]/.test(s)),
-        // anything but double quote or slash or newline
-        readIf(1, (c) => /[^\\\n']/.test(c)),
-    )))
-)
-export const simpleString = alt(
-    seqFlatten(readStr('"'), doubleQuotedContent, readStr('"')),
-    seqFlatten(readStr("'"), singleQuotedContent, readStr("'"))
-)
-export const anyBalanced: Parser<string> = rec(() => flatten(
-    repeat(
-        alt(
-            once(readWhile1((c) => /[^()\[\]\{\}<>"']/.test(c))),
-            simpleString,
-            seqFlatten(readStr('('), anyBalanced, readStr(')')),
-            seqFlatten(readStr('['), anyBalanced, readStr(']')),
-            seqFlatten(readStr('{'), anyBalanced, readStr('}')),
-            seqFlatten(readStr('<'), anyBalanced, readStr('>')),
-        )
-    )
-))
-
 export function seqFlatten(...ps: Parser<string>[]): Parser<string> {
     return flatten(seq(...ps))
 }
@@ -239,3 +204,9 @@ export function seqDrop13<T1, T2, T3>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser
 export function seqDrop15<T1, T2, T3, T4, T5>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>): Parser<[T2, T3, T4]> {
     return drop15(seq(p1, p2, p3, p4, p5))
 }
+
+export const dbg = <T>(p: Parser<T>, where = "DBG") => 
+    map(p, (x) => {
+        console.log(`${where}: ` + JSON.stringify(x))
+        return x
+    })
