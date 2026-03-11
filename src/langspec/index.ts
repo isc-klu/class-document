@@ -53,7 +53,9 @@ export function repeatSep<I, S>(
     );
 }
 export const repeatSepWithStr = <T>(x: Parser<T>, s: string) =>
-    drop2(repeatSep(x, str(s)));
+    (<T1, T2>(p: Parser<[T1, T2]>) => {
+        return p.map(([x, _]) => x);
+    })(repeatSep(x, str(s)));
 
 export const isLetter = (x: string) => /[\p{L}\p{M}]/u.test(x);
 export const isNumeral = (x: string) => /\p{N}/u.test(x);
@@ -68,34 +70,18 @@ export const flatten = (p: Parser<string[]>): Parser<string> => {
     return p.map((xs: string[]) => xs.join(''));
 };
 
-export const drop13 = <T1, T2, T3>(p: Parser<[T1, T2, T3]>) => {
-    return p.map(([_1, x, _2]) => x);
-};
 
-export const drop15 = <T1, T2, T3, T4, T5>(
-    p: Parser<[T1, T2, T3, T4, T5]>,
-): Parser<[T2, T3, T4]> => {
-    return p.map(([_1, x2, x3, x4, _5]) => [x2, x3, x4]);
-};
-
-export const drop1 = <T1, T2>(p: Parser<[T1, T2]>) => {
-    return p.map(([x, _]) => x);
-};
-
-export const drop2 = <T1, T2>(p: Parser<[T1, T2]>) => {
-    return p.map(([x, _]) => x);
-};
 
 export function seqFlatten(...ps: Parser<string>[]): Parser<string> {
     return flatten(seq(...ps));
 }
 
 export function seqDrop2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
-    return drop2(seq(p1, p2));
+    return seq(p1, p2).map(([x, _]) => x);
 }
 
 export function seqDrop13<T>(p1: string, p2: Parser<T>, p3: string): Parser<T> {
-    return drop13(seq(str(p1), p2, str(p3)));
+    return seq(str(p1), p2, str(p3)).map(([_1, x, _2]) => x);
 }
 
 export const dbg = <T>(p: Parser<T>, where = 'DBG') =>
