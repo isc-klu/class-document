@@ -1,5 +1,6 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { altN as alt, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
+import { altN as alt, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15, seqDrop2 } from "./langspec.js";
+import { seq } from "./seq.js";
 
 const rCommentStart = literal("/*");
 const rCommentContentUnit = alt(
@@ -218,35 +219,26 @@ const memberList: Parser<[string[], Member[]]> =
     )
 
 const document = map(
-    seq(
-        // before the class keyword
+    seqDrop2(
         seq(
             space,
             dependencies,
             space,
             dComment,
             space,
-        ),
-        // before "{"
-        seq(
             LiTeRaL("class"),
             space1,
             name,
             optional(annExtends),
             optional(annKeywords),
             space,
+            memberList,
+            space,
         ),
-        memberList,
-        space,
         eof(null)
     ),
-    ([beforeClass, header, members, afterClass]) => {
-        return new Document(
-            ...beforeClass,
-            ...header,
-            members,
-            afterClass
-        )
+    (parts) => {
+        return new Document(...parts)
     }
 )
 

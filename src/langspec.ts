@@ -1,3 +1,5 @@
+import { seq } from "./seq.js";
+
 export interface SrcLoc {
     line: number;
     char: number;
@@ -115,80 +117,6 @@ function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
 
 export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
     return (x) => lazyP()(x)
-}
-
-export function seq<T>(): Parser<T[]>;
-
-export function seq<T1, T2>(
-    p1: Parser<T1>,
-    p2: Parser<T2>
-): Parser<[T1, T2]>;
-
-export function seq<T1, T2, T3>(
-    p1: Parser<T1>,
-    p2: Parser<T2>,
-    p3: Parser<T3>
-): Parser<[T1, T2, T3]>;
-
-export function seq<T1, T2, T3, T4>(
-    p1: Parser<T1>,
-    p2: Parser<T2>,
-    p3: Parser<T3>,
-    p4: Parser<T4>
-): Parser<[T1, T2, T3, T4]>;
-
-export function seq<T1, T2, T3, T4, T5>(
-    p1: Parser<T1>,
-    p2: Parser<T2>,
-    p3: Parser<T3>,
-    p4: Parser<T4>,
-    p5: Parser<T5>
-): Parser<[T1, T2, T3, T4, T5]>;
-
-export function seq<T1, T2, T3, T4, T5, T6>(
-    p1: Parser<T1>,
-    p2: Parser<T2>,
-    p3: Parser<T3>,
-    p4: Parser<T4>,
-    p5: Parser<T5>,
-    p6: Parser<T6>
-): Parser<[T1, T2, T3, T4, T5, T6]>;
-
-export function seq<T1, T2, T3, T4, T5, T6, T7>(
-    p1: Parser<T1>,
-    p2: Parser<T2>,
-    p3: Parser<T3>,
-    p4: Parser<T4>,
-    p5: Parser<T5>,
-    p6: Parser<T6>,
-    p7: Parser<T7>,
-): Parser<[T1, T2, T3, T4, T5, T6, T7]>;
-
-export function seq<T1, T2, T3, T4, T5, T6, T7, T8>(
-    p1: Parser<T1>,
-    p2: Parser<T2>,
-    p3: Parser<T3>,
-    p4: Parser<T4>,
-    p5: Parser<T5>,
-    p6: Parser<T6>,
-    p7: Parser<T7>,
-    p8: Parser<T8>
-): Parser<[T1, T2, T3, T4, T5, T6, T7, T8]>;
-
-export function seq<T1, T2, T3, T4, T5, T6, T7, T8, T9>(
-    p1: Parser<T1>,
-    p2: Parser<T2>,
-    p3: Parser<T3>,
-    p4: Parser<T4>,
-    p5: Parser<T5>,
-    p6: Parser<T6>,
-    p7: Parser<T7>,
-    p8: Parser<T8>,
-    p9: Parser<T9>
-): Parser<[T1, T2, T3, T4, T5, T6, T7, T8, T9]>;
-export function seq<T>(...ps: Parser<T>[]): Parser<T[]>;
-export function seq<T>(...ps: Parser<T>[]): Parser<T[]> {
-    return ps.reduceRight((acc, p) => map(seq2(p, acc), cons), succ([] as T[]));
 }
 
 export function altN<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2>;
@@ -388,6 +316,10 @@ export const drop2 = <T1, T2>(p: Parser<[T1, T2]>) => {
 
 export function seqFlatten(...ps: Parser<string>[]): Parser<string> {
     return flatten(seq(...ps))
+}
+
+export function seqDrop2<T1,T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
+    return drop2(seq(p1, p2))
 }
 
 export function seqDrop13<T1,T2,T3>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>): Parser<T2> {
