@@ -5,11 +5,11 @@ import { alt } from "./alt.js";
 import { seq } from "./seq.js";
 
 const rCommentStart = readStr("/*");
-const rCommentContentUnit = alt(
+const rCommentContentElem = alt(
     once(readWhile1((c) => c !== "*")),
     readIf(2, (s) => s != "*/"),
 )
-const rCommentContent = flatten(repeat(rCommentContentUnit));
+const rCommentContent = flatten(repeat(rCommentContentElem));
 const rCommentEnd = readStr("*/");
 const rComment = flatten(seq(rCommentStart, rCommentContent, rCommentEnd));
 
@@ -24,13 +24,13 @@ const lCommentContent = alt(
 );
 const lComment = flatten(seq(lCommentHead, lCommentContent, readStr("\n")))
 
-const spaceUnit = once(alt(
+const spaceElem = once(alt(
     readWhile1(isSpace),
     lComment,
     rComment,
 ));
-const space = flatten(repeat(spaceUnit));
-const space1 = flatten(repeat1(spaceUnit));
+const space = flatten(repeat(spaceElem));
+const space1 = flatten(repeat1(spaceElem));
 
 const dependencyKeyword = alt(readStR("import"), readStR("include"), readStR("includegenerator"));
 const dependency = map(
