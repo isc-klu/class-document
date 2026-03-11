@@ -55,6 +55,14 @@ const nameList = seqDrop13(
     literal("("), drop2(repeatSep(nameWithPad, literal(","))), literal(")")
 )
 
+
+const clsType = anyBalanced
+
+const asType = seqFlatten(
+    space, LiTeRaL("as"), space, clsType
+)
+
+
 const keywordValue = seqFlatten(space, literal("="), space, anyBalanced)
 const keyword =
     altN(
@@ -69,6 +77,20 @@ const annKeywords = map(
     seq(space, keywordList),
     (parts) => new Keywords(...parts)
 )
+
+const parameterAnnOutput = altN(
+    seqFlatten(LiTeRaL("Output"), space1),
+    seqFlatten(LiTeRaL("ByRef"), space1),
+)
+const parameterAnnEq = seqFlatten(
+    space, literal("="), space, anyBalanced
+)
+const parameter = seqFlatten(
+    optional(parameterAnnOutput), name, optional(asType), optional(parameterAnnEq)
+)
+const parameterWithPad = seq(space, parameter, space)
+const parameters = drop2(repeatSep(parameterWithPad, literal(",")));
+const parameterList = seqDrop13(literal('('), parameters, literal(')'))
 
 
 const classExtendsValue = altN(
@@ -156,22 +178,6 @@ const mTrigger = map(
     (parts) => new TriggerLikeMember(...parts)
 )
 
-const parameterAnnOutput = altN(
-    seqFlatten(LiTeRaL("Output"), space1),
-    seqFlatten(LiTeRaL("ByRef"), space1),
-)
-const parameterAnnAs = seqFlatten(
-    space, LiTeRaL("as"), space, anyBalanced
-)
-const parameterAnnEq = seqFlatten(
-    space, literal("="), space, anyBalanced
-)
-const parameter = seqFlatten(
-    optional(parameterAnnOutput), name, optional(parameterAnnAs), optional(parameterAnnEq)
-)
-const parameterWithPad = seq(space, parameter, space)
-const parameters = drop2(repeatSep(parameterWithPad, literal(",")));
-const parameterList = seqDrop13(literal('('), parameters, literal(')'))
 const mMethodSignature = seq(
     dComment,
     space,
@@ -185,7 +191,7 @@ const mMethodSignature = seq(
     name,
     space,
     parameterList,
-    optional(parameterAnnAs, ""),
+    optional(asType, ""),
 )
 const mMethodBody = seqDrop13(
     literal('{'),
