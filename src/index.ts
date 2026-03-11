@@ -1,8 +1,7 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { anyBalanced, readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once, Reader, readWhile1, repeat, repeat1, repeatSep, simpleString, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr } from "./langspec.js";
-import { optional } from "./alt.js";
-import { alt } from "./alt.js";
-import { seq } from "./seq.js";
+import { anyBalanced, readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once, Reader, readWhile1, repeat, repeat1, repeatSep, simpleString, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr } from "./langspec/index.js";
+import { alt, optional } from "./langspec/alt.js";
+import { seq } from "./langspec/seq.js";
 
 const rCommentStart = readStr("/*");
 const rCommentContentElem = alt(
@@ -192,7 +191,7 @@ const mMethodLike = map(
         name,
         space,
         parameterList,
-        optional(asType, ""),
+        optional(asType),
         optional(annKeywords),
         space,
         mMethodBody

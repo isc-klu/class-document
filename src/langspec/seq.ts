@@ -1,4 +1,4 @@
-import { type Parser, map, succ, Reader, type Result, bind } from "./langspec.js";
+import { type Parser, map, succ, Reader, type Result, bind } from "./index.js";
 
 function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
     return bind(p1, (x) => bind(p2, (y) => succ([x, y])))

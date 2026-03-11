@@ -1,4 +1,3 @@
-
 export class Dependency {
     keyword: string;
     space: string;
@@ -217,14 +216,14 @@ export class MethodLikeMember extends Member {
     content: string;
     gapNameParen: string;
     parameters: [string, string, string][];
-    typeAnn: string;
+    typeAnn: string | null ;
     constructor(
         keyword: string,
         gapKeywordName: string,
         name: string,
         gapNameParen: string,
         parameters: [string, string, string][],
-        typeAnn: string,
+        typeAnn: string | null,
         keywords: null | Keywords,
         gapNameContent: string,
         content: string
@@ -246,7 +245,7 @@ export class MethodLikeMember extends Member {
             '(' +
             this.parameters.map(([s1, x, s2]) => s1 + x + s2).join(",") +
             ')' +
-            this.typeAnn +
+            (this.typeAnn ?? "") +
             (this.keywords === null ? "" : this.keywords.toString()) +
             this.gapNameContent +
             "{" +

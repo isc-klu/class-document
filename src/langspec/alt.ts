@@ -1,4 +1,4 @@
-import { type Parser, Reader, fail, succ } from "./langspec.js";
+import { type Parser, Reader, fail, succ } from "./index.js";
 
 export function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
     function* g(reader: Reader) {
