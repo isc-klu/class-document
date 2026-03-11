@@ -1,15 +1,18 @@
 import {
+    AnnValue,
     Dependency,
     Description,
     Document,
     Extends,
-    ForeignKeyLikeMember,
-    Keywords,
+    MForeignKey,
+    AnnKeywordList,
     Member,
     MethodLikeMember,
-    PropertyLikeMember,
-    TriggerLikeMember,
-    XDataLikeMember,
+    MParameter,
+    MIndex,
+    MTrigger,
+    MXDataOrStorage,
+    MPropertyOrProjection,
 } from './classes.js';
 import {
     strIf,
@@ -130,7 +133,7 @@ const annKeywords = (keywordName: Parser<string>) => {
     const keywords = alt(repeatSepWithStr(keywordWithPad, ','), gap);
     const keywordList = seqDrop13('[', keywords, ']');
     const annKeywords = seq(gap, keywordList).map(
-        (parts) => new Keywords(...parts),
+        (parts) => new AnnKeywordList(...parts),
     );
     return annKeywords;
 };
@@ -170,37 +173,6 @@ const classAnnKeywords = annKeywords(
     ),
 );
 
-const propertyAnnKeywords = annKeywords(
-    alt(
-        StR('Aliases'),
-        StR('Calculated'),
-        StR('Cardinality'),
-        StR('ClientName'),
-        StR('Collection'),
-        StR('ComputeLocalOnly'),
-        StR('Deferred'),
-        StR('Deprecated'),
-        StR('Final'),
-        StR('Identity'),
-        StR('InitialExpression'),
-        StR('Internal'),
-        StR('Inverse'),
-        StR('MultiDimensional'),
-        StR('OnDelete'),
-        StR('Private'),
-        StR('ReadOnly'),
-        StR('Required'),
-        StR('ServerOnly'),
-        StR('SqlColumnNumber'),
-        StR('SqlComputeCode'),
-        StR('SqlComputed'),
-        StR('SqlComputeOnChange'),
-        StR('SqlFieldName'),
-        StR('SqlListDelimiter'),
-        StR('SqlListType'),
-        StR('Transient'),
-    ),
-);
 const methodAnnKeywords = annKeywords(
     alt(
         StR('Abstract'),
@@ -256,22 +228,68 @@ const annExtends = seq(gap1, StR('extends'), gap1, ancestor).map(
     (parts) => new Extends(...parts),
 );
 
-const mParameterLike = seqDrop2(
+const annValue = seq(seqFlatten(gap, str('='), gap), value).map(
+    (parts) => new AnnValue(...parts),
+);
+
+const mParameter = seqDrop2(
+    seq(
+        StR('Parameter'),
+        gap1,
+        name,
+        optional(asType),
+        optional(annKeywords(name)),
+        optional(annValue),
+        gap,
+    ),
+    str(';'),
+).map((parts) => {
+    return new MParameter(...parts);
+});
+
+const propertyCollection = seqFlatten(
+    gap1,
+    alt(StR('List'), StR('Array')),
+    gap1,
+    StR('Of'),
+);
+const asPropertyType = seqFlatten(
+    gap,
+    StR('as'),
+    optional(propertyCollection, ''),
+    gap1,
+    clsType,
+);
+
+const mPropertyOrProjection = seqDrop2(
     seq(
         alt(
-            StR('parameter'),
-            StR('property'),
-            StR('projection'),
-            StR('index'),
-            StR('relationship'),
+            StR('Property'),
+            StR('Relationship'), // relationship is a kind of property
+            StR('Projection'),
         ),
         gap1,
         name,
+        optional(asPropertyType),
+        optional(annKeywords(name)),
+        gap,
+    ),
+    str(';'),
+).map((parts) => {
+    return new MPropertyOrProjection(...parts);
+});
+
+const mIndex = seqDrop2(
+    seq(
+        alt(StR('index')),
+        gap1,
+        name,
+        // TODO: fully understand the syntax of index
         strWhile((x) => x !== ';'),
     ),
     str(';'),
 ).map((parts) => {
-    return new PropertyLikeMember(...parts);
+    return new MIndex(...parts);
 });
 
 const mForeignKey = seqDrop2(
@@ -287,7 +305,7 @@ const mForeignKey = seqDrop2(
     ),
     str(';'),
 ).map((parts) => {
-    return new ForeignKeyLikeMember(...parts);
+    return new MForeignKey(...parts);
 });
 
 const mXData = seq(
@@ -298,7 +316,7 @@ const mXData = seq(
     gap,
     seqDrop13('{', balanced, '}'),
 ).map((parts) => {
-    return new XDataLikeMember(...parts);
+    return new MXDataOrStorage(...parts);
 });
 
 const mTrigger = seq(
@@ -308,7 +326,7 @@ const mTrigger = seq(
     optional(memberAnnKeywords),
     gap,
     seqDrop13('{', balanced, '}'),
-).map((parts) => new TriggerLikeMember(...parts));
+).map((parts) => new MTrigger(...parts));
 
 const mMethodBody = seqDrop13('{', balanced, '}');
 const mMethodLike = seq(
@@ -326,7 +344,9 @@ const mMethodLike = seq(
 });
 
 const member = alt<Member>(
-    mParameterLike,
+    mParameter,
+    mPropertyOrProjection,
+    mIndex,
     mForeignKey,
     mXData,
     mTrigger,

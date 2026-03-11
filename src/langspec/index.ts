@@ -70,8 +70,6 @@ export const flatten = (p: Parser<string[]>): Parser<string> => {
     return p.map((xs: string[]) => xs.join(''));
 };
 
-
-
 export function seqFlatten(...ps: Parser<string>[]): Parser<string> {
     return flatten(seq(...ps));
 }

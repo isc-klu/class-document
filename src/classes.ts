@@ -43,7 +43,7 @@ export class Extends {
     }
 }
 
-export class Keywords {
+export class AnnKeywordList {
     gapBefore: string;
     // String when the keywords is essentially empty -- need a string to describe the gap between []
     keywords: [string, string, string][] | string;
@@ -86,17 +86,17 @@ export abstract class Member {
     keyword: string;
     gapKeywordName: string;
     name: string;
-    gapNameContent: string;
+    gapNameEnd: string;
     constructor(
         keyword: string,
         gapKeywordName: string,
         name: string,
-        gapNameContent: string,
+        gapNameEnd: string,
     ) {
         this.keyword = keyword;
         this.gapKeywordName = gapKeywordName;
         this.name = name;
-        this.gapNameContent = gapNameContent;
+        this.gapNameEnd = gapNameEnd;
     }
 
     setDescription(description: Description, gapDescriptionKeyword: string) {
@@ -109,7 +109,81 @@ export abstract class Member {
     }
 }
 
-export class PropertyLikeMember extends Member {
+export class AnnType {
+    constructor(
+        private keyword: string,
+        private type: string,
+    ) {}
+
+    toString() {
+        return this.keyword + this.type;
+    }
+}
+
+export class AnnValue {
+    constructor(
+        private keyword: string,
+        private type: string,
+    ) {}
+
+    toString() {
+        return this.keyword + this.type;
+    }
+}
+
+export class MParameter extends Member {
+    constructor(
+        keyword: string,
+        gapKeywordName: string,
+        name: string,
+        private annType: string | null,
+        private keywords: AnnKeywordList | null,
+        private annValue: AnnValue | null,
+        gapNameEnd: string,
+    ) {
+        super(keyword, gapKeywordName, name, gapNameEnd);
+    }
+
+    toString(): string {
+        return this.addDescription(
+            this.keyword +
+                this.gapKeywordName +
+                this.name +
+                (this.annType ?? '') +
+                (this.keywords?.toString() ?? '') +
+                (this.annValue?.toString() ?? '') +
+                this.gapNameEnd +
+                ';',
+        );
+    }
+}
+
+export class MPropertyOrProjection extends Member {
+    constructor(
+        keyword: string,
+        gapKeywordName: string,
+        name: string,
+        private annClassName: string | null,
+        private keywordList: AnnKeywordList | null,
+        gapNameEnd: string,
+    ) {
+        super(keyword, gapKeywordName, name, gapNameEnd);
+    }
+
+    toString(): string {
+        return this.addDescription(
+            this.keyword +
+                this.gapKeywordName +
+                this.name +
+                (this.annClassName ?? '') +
+                (this.keywordList?.toString() ?? '') +
+                this.gapNameEnd +
+                ';',
+        );
+    }
+}
+
+export class MIndex extends Member {
     content: string;
     constructor(
         keyword: string,
@@ -126,29 +200,29 @@ export class PropertyLikeMember extends Member {
             this.keyword +
                 this.gapKeywordName +
                 this.name +
-                this.gapNameContent +
+                this.gapNameEnd +
                 this.content +
                 ';',
         );
     }
 }
 
-export class ForeignKeyLikeMember extends Member {
+export class MForeignKey extends Member {
     ids: [string, string, string][];
     referencedClass: string;
     refIndex: string | null;
-    keywordList: Keywords | null;
+    keywordList: AnnKeywordList | null;
     constructor(
         keyword: string,
         gapKeywordName: string,
         name: string,
         ids: [string, string, string][],
-        gapNameContent: string,
+        gapNameEnd: string,
         referencedClass: string,
         refIndex: string | null,
-        keywordList: Keywords | null,
+        keywordList: AnnKeywordList | null,
     ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
+        super(keyword, gapKeywordName, name, gapNameEnd);
         this.ids = ids;
         this.referencedClass = referencedClass;
         this.refIndex = refIndex;
@@ -163,7 +237,7 @@ export class ForeignKeyLikeMember extends Member {
                 '(' +
                 this.ids.map(([s1, x, s2]) => s1 + x + s2).join(',') +
                 ')' +
-                this.gapNameContent +
+                this.gapNameEnd +
                 this.referencedClass +
                 (this.refIndex === null ? '' : '(' + this.refIndex + ')') +
                 (this.keywordList === null ? '' : this.keywordList.toString()) +
@@ -172,18 +246,18 @@ export class ForeignKeyLikeMember extends Member {
     }
 }
 
-export class XDataLikeMember extends Member {
-    keywords: null | Keywords;
+export class MXDataOrStorage extends Member {
+    keywords: null | AnnKeywordList;
     content: string;
     constructor(
         keyword: string,
         gapKeywordName: string,
         name: string,
-        keywords: null | Keywords,
-        gapNameContent: string,
+        keywords: null | AnnKeywordList,
+        gapNameEnd: string,
         content: string,
     ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
+        super(keyword, gapKeywordName, name, gapNameEnd);
         this.keywords = keywords;
         this.content = content;
     }
@@ -194,7 +268,7 @@ export class XDataLikeMember extends Member {
                 this.gapKeywordName +
                 this.name +
                 (this.keywords === null ? '' : this.keywords.toString()) +
-                this.gapNameContent +
+                this.gapNameEnd +
                 '{' +
                 this.content +
                 '}',
@@ -202,18 +276,18 @@ export class XDataLikeMember extends Member {
     }
 }
 
-export class TriggerLikeMember extends Member {
-    keywords: null | Keywords;
+export class MTrigger extends Member {
+    keywords: null | AnnKeywordList;
     content: string;
     constructor(
         keyword: string,
         gapKeywordName: string,
         name: string,
-        keywords: null | Keywords,
-        gapNameContent: string,
+        keywords: null | AnnKeywordList,
+        gapNameEnd: string,
         content: string,
     ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
+        super(keyword, gapKeywordName, name, gapNameEnd);
         this.keywords = keywords;
         this.content = content;
     }
@@ -224,7 +298,7 @@ export class TriggerLikeMember extends Member {
                 this.gapKeywordName +
                 this.name +
                 (this.keywords === null ? '' : this.keywords.toString()) +
-                this.gapNameContent +
+                this.gapNameEnd +
                 '{' +
                 this.content +
                 '}',
@@ -233,7 +307,7 @@ export class TriggerLikeMember extends Member {
 }
 
 export class MethodLikeMember extends Member {
-    keywords: null | Keywords;
+    keywords: null | AnnKeywordList;
     content: string;
     gapNameParen: string;
     parameters: [string, string, string][];
@@ -245,11 +319,11 @@ export class MethodLikeMember extends Member {
         gapNameParen: string,
         parameters: [string, string, string][],
         typeAnn: string | null,
-        keywords: null | Keywords,
-        gapNameContent: string,
+        keywords: null | AnnKeywordList,
+        gapNameEnd: string,
         content: string,
     ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
+        super(keyword, gapKeywordName, name, gapNameEnd);
         this.keywords = keywords;
         this.gapNameParen = gapNameParen;
         this.parameters = parameters;
@@ -268,7 +342,7 @@ export class MethodLikeMember extends Member {
                 ')' +
                 (this.typeAnn ?? '') +
                 (this.keywords === null ? '' : this.keywords.toString()) +
-                this.gapNameContent +
+                this.gapNameEnd +
                 '{' +
                 this.content +
                 '}',
@@ -286,7 +360,7 @@ export class Document {
     gapKeywordName: string;
     name: string;
     extends: null | Extends;
-    keywords: null | Keywords;
+    keywords: null | AnnKeywordList;
     gapKeywordsBegin: string;
     members: [string[], Member[]];
     gapAfterClass: string;
@@ -301,7 +375,7 @@ export class Document {
         gapKeywordName: string,
         name: string,
         ext: null | Extends,
-        keywords: null | Keywords,
+        keywords: null | AnnKeywordList,
         gapKeywordsBegin: string,
         members: [string[], Member[]],
         gapAfterClass: string,
