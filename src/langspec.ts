@@ -5,7 +5,6 @@ export interface SrcLoc {
 }
 
 export class Reader {
-
     private readonly content: string;
     private readonly srcloc: SrcLoc;
 
@@ -37,12 +36,8 @@ export class Reader {
         return null;
     }
 
-    public atEnd() {
+    public atEnd(): boolean {
         return this.content.length === this.srcloc.absolute
-    }
-
-    public locate(): Result<SrcLoc> {
-        return { reader: this, value: this.srcloc };
     }
 }
 
@@ -51,31 +46,48 @@ export interface Result<T> {
     value: T,
 }
 
-export type ResultSet<T> = Generator<Result<T>, null, undefined>;
+export type ResultSet<T> = Generator<Result<T>>;
 
 export type Parser<T> = (reader: Reader) => ResultSet<T>
 
+export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
+    function* g(reader: Reader) {
+        yield* p(reader).map(({ reader, value }) => ({ reader, value: f(value)}))
+    }
+    return g;
+}
+
+export function flatMap<X, Y>(p: Parser<X>, f: (x: X) => Generator<Y>): Parser<Y> {
+    function* g(reader: Reader) {
+        yield* p(reader).flatMap(({ reader, value }) => f(value).map((value) => ({ reader, value })))
+    }
+    return g;
+}
+
+export function succ<T>(value: T): Parser<T> {
+    function* g(reader: Reader) {
+        yield { reader, value }
+    };
+    return g
+}
+
+export function* fail<T>(_: Reader): ResultSet<T> { return null; };
+
 export function read(n: number = 1) {
     function* g(reader: Reader): Generator<Result<string>> {
-        for (const o of reader.read(n)) {
-            yield o;
-        }
+        yield* reader.read(n)
         return null;
     }
     return g
 }
 
-export const locate = (reader: Reader): Result<SrcLoc> => reader.locate();
-
-export function succ<T>(value: T): Parser<T> {
-    function* g(reader: Reader) {
-        yield { reader, value }
-        return null;
-    };
-    return g
+export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
+    return flatMap(p, function* (x) {
+        if (f(x)) {
+            yield x;
+        }
+    })
 }
-
-export function* fail<T>(reader: Reader): ResultSet<T> { return null; };
 
 export function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
     function* g(reader: Reader): Generator<Result<[T1, T2]>> {
@@ -96,19 +108,6 @@ export function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
     function* g(reader: Reader) {
         yield* p1(reader);
         yield* p2(reader);
-        return null;
-    }
-    return g;
-}
-
-export function map<T1, T2>(p: Parser<T1>, f: (x: T1) => T2): Parser<T2> {
-    function* g(reader: Reader) {
-        for (const o of p(reader)) {
-            yield {
-                reader: o.reader,
-                value: f(o.value)
-            }
-        }
         return null;
     }
     return g;
@@ -143,16 +142,13 @@ export function altN<T>(...ps: Parser<T>[]): Parser<T> {
     return ps.reduceRight((acc, p) => alt2(p, acc), fail);
 }
 
+export function optional<A, B = null>(p: Parser<A>, x?: B): Parser<A | B>;
+export function optional(p: Parser<any>, x: any = null): Parser<any> {
+    return alt2(p, succ(x))
+}
+
 export function firstN(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
-    function* g(reader: Reader) {
-        for (const prefix of reader.read(n)) {
-            if (p(prefix.value)) {
-                yield prefix
-            }
-        }
-        return null;
-    }
-    return g
+    return filter(read(n), p)
 }
 
 export function chars(p: (x: string) => boolean = (_) => true): Parser<string> {
@@ -216,12 +212,12 @@ export function repeat<T>(x: Parser<T>): Parser<T[]> {
     return g;
 }
 
-export const repeatSome = <T>(p: Parser<T>) => {
+export const repeat1 = <T>(p: Parser<T>) => {
     return map(seq2(p, repeat(p)), cons)
 }
 
-export function sepList<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]> {
-    return alt2(
+export function repeatSep<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]> {
+    return optional(
         map(seq2(pi, repeat(seq2(ps, pi))), ([x, xys]) => {
             const xs: I[] = [x];
             const ys: S[] = [];
@@ -231,7 +227,7 @@ export function sepList<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]> 
             }
             return [xs, ys];
         }),
-        succ([[], []])
+        [[], []]
     )
 }
 
@@ -313,3 +309,8 @@ export const eof
         }
         return g;
     }
+
+
+export const flatten = (p: Parser<string[]>): Parser<string> => {
+    return map(p, join)
+}
