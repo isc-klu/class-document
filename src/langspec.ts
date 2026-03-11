@@ -1,4 +1,4 @@
-import { alt2, alt } from "./alt.js";
+import { alt, optional } from "./alt.js";
 import { seq } from "./seq.js";
 
 export interface SrcLoc {
@@ -40,6 +40,25 @@ export class Reader {
         };
     }
 
+    public * readWhile(f: (_: string) => boolean): ResultSet<string> {
+        let { line, char, absolute } = this.srcloc;
+        for (; absolute < this.content.length; absolute ++) {
+            if (! f(this.content[absolute]!)) {
+                break
+            }
+            if (this.content[absolute] === "\n") {
+                line += 1;
+                char = 0;
+            } else {
+                char += 1;
+            }
+        }
+        yield { 
+            reader: new Reader(this.content, { line, char, absolute }),
+            value: this.content.slice(this.srcloc.absolute, absolute)
+        };
+    }
+
     public atEnd(): boolean {
         return this.content.length === this.srcloc.absolute
     }
@@ -61,11 +80,12 @@ export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
     return g;
 }
 
-export function flatMap<X, Y>(p: Parser<X>, f: (x: X) => Generator<Y>): Parser<Y> {
-    function* g(reader: Reader) {
-        yield* p(reader).flatMap(({ reader, value }) => f(value).map((value) => ({ reader, value })))
+export function bind<X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>): Parser<Y> {
+    return function* (reader: Reader) {
+        for (const r1 of p(reader)) {
+            yield *f(r1.value)(r1.reader)
+        }        
     }
-    return g;
 }
 
 export function succ<T>(value: T): Parser<T> {
@@ -77,51 +97,24 @@ export function succ<T>(value: T): Parser<T> {
 
 export function* fail<T>(_: Reader): ResultSet<T> { return null; };
 
-export function read(n: number = 1) {
-    function* g(reader: Reader): Generator<Result<string>> {
-        yield* reader.read(n)
-        return null;
-    }
-    return g
-}
-
 export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
-    return flatMap(p, function* (x) {
-        if (f(x)) {
-            yield x;
-        }
-    })
+    return bind(p, (x) => f(x) ? succ(x) : fail<T>)
 }
 
-export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
-    return (x) => lazyP()(x)
+export function read(n: number = 1) {
+    return function* (reader: Reader): Generator<Result<string>> {
+        yield* reader.read(n)
+    }
 }
 
-export function optional<A, B = null>(p: Parser<A>, x?: B): Parser<A | B>;
-export function optional(p: Parser<any>, x: any = null): Parser<any> {
-    return alt2(p, succ(x))
+export function readWhile(p: (x: string) => boolean = (_) => true): Parser<string> {
+    return function* (reader: Reader) {
+        yield* reader.readWhile(p)
+    }
 }
 
 export function readIf(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
     return filter(read(n), p)
-}
-
-export function readWhile(p: (x: string) => boolean = (_) => true): Parser<string> {
-    function* g(reader: Reader) {
-        let n = 0;
-        while (reader.charAt(n).length > 0 && p(reader.charAt(n))) {
-            n++;
-        }
-        for (; n >= 0; n--) {
-            yield* reader.read(n)
-        }
-        return null;
-    }
-    return g
-}
-
-export function readWhile1(p: (x: string) => boolean = (_) => true): Parser<string> {
-    return filter(readWhile(p), (x) => x.length > 0)
 }
 
 export function readStr<T extends string>(x: T): Parser<T> {
@@ -132,7 +125,14 @@ export function readStR<T extends string>(x: T): Parser<T> {
     return readIf(x.length, (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase()) as Parser<T>;
 }
 
-export const join = (xs: string[]) => xs.join("")
+export function readWhile1(p: (x: string) => boolean = (_) => true): Parser<string> {
+    return filter(readWhile(p), (x) => x.length > 0)
+}
+
+export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
+    return (x) => lazyP()(x)
+}
+
 export const cons = <T>([x, xs]: [T, T[]]) => [x, ...xs]
 
 export function repeat<T>(x: Parser<T>): Parser<T[]> {
@@ -208,56 +208,8 @@ export function takeAll<T>(r: ResultSet<T>): Result<T>[] {
     return [...r];
 }
 
-export const doubleQuotedContent = map(
-    oneOff(repeat(alt(
-        // backslash followed by anything but newline
-        readIf(2, (s) => /\\[^\n]/.test(s)),
-        // anything but double quote or slash or newline
-        readIf(1, (c) => /[^\\\n"]/.test(c)),
-    ))),
-    join
-)
-export const singleQuotedContent = map(
-    oneOff(repeat(alt(
-        // backslash followed by anything but newline
-        readIf(2, (s) => /\\[^\n]/.test(s)),
-        // anything but double quote or slash or newline
-        readIf(1, (c) => /[^\\\n']/.test(c)),
-    ))),
-    join
-)
-export const singleLineString = alt(
-    map(seq(readStr('"'), doubleQuotedContent, readStr('"')), join),
-    map(seq(readStr("'"), singleQuotedContent, readStr("'")), join)
-)
-export const anythingBalanced: Parser<string> = rec(() => map(
-    repeat(
-        alt(
-            oneOff(readWhile1((c) => /[^()\[\]\{\}<>"']/.test(c))),
-            singleLineString,
-            map(seq(readStr('('), anythingBalanced, readStr(')')), join),
-            map(seq(readStr('['), anythingBalanced, readStr(']')), join),
-            map(seq(readStr('{'), anythingBalanced, readStr('}')), join),
-            map(seq(readStr('<'), anythingBalanced, readStr('>')), join),
-        )
-    ),
-    join)
-)
-
-export const eof
-    = <T>(value: T): Parser<T> => {
-        function* g(reader: Reader) {
-            if (reader.atEnd()) {
-                yield { reader, value };
-            }
-            return null;
-        }
-        return g;
-    }
-
-
 export const flatten = (p: Parser<string[]>): Parser<string> => {
-    return map(p, join)
+    return map(p, ((xs: string[]) => xs.join("")))
 }
 
 export const drop13 = <T1, T2, T3>(p: Parser<[T1, T2, T3]>) => {
@@ -275,6 +227,51 @@ export const drop1 = <T1, T2>(p: Parser<[T1, T2]>) => {
 export const drop2 = <T1, T2>(p: Parser<[T1, T2]>) => {
     return map(p, ([x, _]) => x)
 }
+
+
+export const doubleQuotedContent = flatten(
+    oneOff(repeat(alt(
+        // backslash followed by anything but newline
+        readIf(2, (s) => /\\[^\n]/.test(s)),
+        // anything but double quote or slash or newline
+        readIf(1, (c) => /[^\\\n"]/.test(c)),
+    )))
+)
+export const singleQuotedContent = flatten(
+    oneOff(repeat(alt(
+        // backslash followed by anything but newline
+        readIf(2, (s) => /\\[^\n]/.test(s)),
+        // anything but double quote or slash or newline
+        readIf(1, (c) => /[^\\\n']/.test(c)),
+    )))
+)
+export const singleLineString = alt(
+    seqFlatten(readStr('"'), doubleQuotedContent, readStr('"')),
+    seqFlatten(readStr("'"), singleQuotedContent, readStr("'"))
+)
+export const anythingBalanced: Parser<string> = rec(() => flatten(
+    repeat(
+        alt(
+            oneOff(readWhile1((c) => /[^()\[\]\{\}<>"']/.test(c))),
+            singleLineString,
+            seqFlatten(readStr('('), anythingBalanced, readStr(')')),
+            seqFlatten(readStr('['), anythingBalanced, readStr(']')),
+            seqFlatten(readStr('{'), anythingBalanced, readStr('}')),
+            seqFlatten(readStr('<'), anythingBalanced, readStr('>')),
+        )
+    )
+))
+
+export const eof
+    = <T>(value: T): Parser<T> => {
+        function* g(reader: Reader) {
+            if (reader.atEnd()) {
+                yield { reader, value };
+            }
+            return null;
+        }
+        return g;
+    }
 
 export function seqFlatten(...ps: Parser<string>[]): Parser<string> {
     return flatten(seq(...ps))
