@@ -1,17 +1,6 @@
 import { alt, optional } from "./alt.js";
 import { seq } from "./seq.js";
-import { withReader, type Parser, bind } from "./core.js";
-
-export const succ = <T>(value: T) =>
-    withReader((reader) => [{ reader, value}].values())
-export const fail: Parser<never> =
-    withReader((_) => [].values())
-export const eof = <T>(value: T) =>
-    withReader((reader) => (reader.atEnd() ? [{ reader, value }] : []).values())
-export const strN = (n: number = 1) =>
-    withReader((reader) => reader.read(n))
-export const strWhile = (p: (x: string) => boolean = (_) => true) =>
-    withReader((reader) => reader.readWhile(p))
+import { bind, fail, strN, strWhile, succ, type Parser } from "./core.js";
 
 export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
     return bind(p, (x) => succ(f(x)))

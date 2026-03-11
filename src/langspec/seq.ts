@@ -1,4 +1,5 @@
-import { map, succ } from "./index.js";
+import { map } from "./index.js";
+import { succ } from "./core.js";
 import { type Parser, bind } from "./core.js";
 
 function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {

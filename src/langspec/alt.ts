@@ -1,4 +1,4 @@
-import { fail, succ } from "./index.js";
+import { fail, succ } from "./core.js";
 import { type Parser, alt2 } from "./core.js";
 
 export function alt<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2>;

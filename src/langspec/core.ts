@@ -68,23 +68,39 @@ export interface Result<T> {
 
 export type ResultSet<T> = IteratorObject<Result<T>, void>;
 
-export type Parser<T> = [(reader: Reader) => ResultSet<T>];
+export class Parser<T> {
+    private readonly f: (reader: Reader) => ResultSet<T>;
+    constructor(f: Parser<T>["f"]) {
+        this.f = f
+    }
+    proceed(reader: Reader) {
+        return this.f(reader)
+    }
+    exec(source: string, n: number = 1) {
+        return [...this.proceed(new Reader(source)).take(n)];
+    }
+}
 
-export function withReader<T>(f: (_: Reader) => ResultSet<T>): Parser<T> {
-    return [function* (reader: Reader) {
+function withReader<T>(f: (_: Reader) => ResultSet<T>): Parser<T> {
+    return new Parser(function* (reader: Reader) {
         yield* f(reader);
-    }];
+    });
 }
-export const bind = <X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>) => withReader((reader) => p[0](reader).flatMap(({ reader, value }) => f(value)[0](reader)));
-export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => [(x: Reader) => lazyP()[0](x)];
-export const once = <T>(p: Parser<T>): Parser<T> => withReader((reader) => p[0](reader).take(1));
+
+export const bind = <X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>) => withReader((reader) => p.proceed(reader).flatMap(({ reader, value }) => f(value).proceed(reader)));
+
+export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => new Parser((x: Reader) => lazyP().proceed(x));
+export const once = <T>(p: Parser<T>): Parser<T> => withReader((reader) => p.proceed(reader).take(1));
 export function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
-    return [function* g(reader: Reader) {
-        yield* p1[0](reader);
-        yield* p2[0](reader);
+    return new Parser<T1|T2>(function* (reader: Reader) {
+        yield* p1.proceed(reader);
+        yield* p2.proceed(reader);
         return;
-    }];
+    });
 }
-export function exec<T>(p: Parser<T>, source: string, n: number = 1) {
-    return [...p[0](new Reader(source)).take(n)];
-}
+export const succ = <T>(value: T) => withReader((reader) => [{ reader, value }].values());
+export const fail: Parser<never> = withReader((_) => [].values());
+export const eof = <T>(value: T) => withReader((reader) => (reader.atEnd() ? [{ reader, value }] : []).values());
+export const strN = (n: number = 1) => withReader((reader) => reader.read(n));
+export const strWhile = (p: (x: string) => boolean = (_) => true) => withReader((reader) => reader.readWhile(p));
+
