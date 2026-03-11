@@ -105,8 +105,6 @@ const annExtends = map(
 const mPropertyLike = map(
     seqDrop2(
         seq(
-            dComment,
-            space,
             alt(
                 LiTeRaL("parameter"),
                 LiTeRaL("property"),
@@ -129,8 +127,6 @@ const mPropertyLike = map(
 const mForeignKey = map(
     seqDrop2(
         seq(
-            dComment,
-            space,
             LiTeRaL("foreignkey"),
             space1,
             name,
@@ -147,8 +143,6 @@ const mForeignKey = map(
 
 const mXData = map(
     seq(
-        dComment,
-        space,
         alt(
             LiTeRaL("xdata"),
             LiTeRaL("storage")
@@ -170,8 +164,6 @@ const mXData = map(
 
 const mTrigger = map(
     seq(
-        dComment,
-        space,
         LiTeRaL("trigger"),
         space1,
         name,
@@ -189,8 +181,6 @@ const mMethodBody = seqDrop13(
 )
 const mMethodLike = map(
     seq(
-        dComment,
-        space,
         alt(
             LiTeRaL("trigger"),
             LiTeRaL("method"),
@@ -212,7 +202,14 @@ const mMethodLike = map(
 )
 
 const member = alt<Member>(mPropertyLike, mForeignKey, mXData, mTrigger, mMethodLike)
-const members = repeatSep(space, member)
+const memberWithComment = map(
+    seq(dComment, space, member),
+    ([description, gapDescriptionKeyword, member]) => {
+        member.setDescription(description, gapDescriptionKeyword)
+        return member
+    }
+)
+const members = repeatSep(space, memberWithComment)
 const memberList = seqDrop13(literal("{"), members, literal("}"))
 
 const document = map(
