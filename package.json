@@ -1,22 +1,22 @@
 {
-  "name": "class-document",
-  "version": "1.0.0",
-  "description": "Parse and output class documents",
-  "license": "ISC",
-  "author": "",
-  "type": "module",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
-  "scripts": {
-    "test": "node test/index.js",
-    "watch": "npx tsc --watch",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,html,json}\""
-  },
-  "devDependencies": {
-    "@types/node": "^25.3.5",
-    "prettier": "^3.8.1",
-    "typescript": "^5.9.3"
-  }
+    "name": "class-document",
+    "version": "1.0.0",
+    "description": "Parse and output class documents",
+    "license": "ISC",
+    "author": "",
+    "type": "module",
+    "main": "index.js",
+    "directories": {
+        "test": "test"
+    },
+    "scripts": {
+        "test": "node test/index.js",
+        "watch": "npx tsc --watch",
+        "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,html,json}\""
+    },
+    "devDependencies": {
+        "@types/node": "^25.3.5",
+        "prettier": "^3.8.1",
+        "typescript": "^5.9.3"
+    }
 }
