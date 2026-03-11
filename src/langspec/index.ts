@@ -91,6 +91,11 @@ export const strWhile = (p: (x: string) => boolean = (_) => true) =>
     withReader((reader) => reader.readWhile(p))
 export const bind = <X, Y>(p: Parser<X>, f: (x: X) => Parser<Y>) =>
     withReader((reader) => p(reader).flatMap(({ reader, value }) => f(value)(reader)))
+export const rec = <T>(lazyP: () => Parser<T>) => 
+    (x: Reader) => lazyP()(x)
+
+export const once = <T>(p: Parser<T>) =>
+    withReader((reader) => p(reader).take(1))
 
 export function map<X, Y>(p: Parser<X>, f: (x: X) => Y): Parser<Y> {
     return bind(p, (x) => succ(f(x)))
@@ -117,11 +122,6 @@ export function strWhile1(p: (x: string) => boolean = (_) => true): Parser<strin
     return filter(strWhile(p), (x) => x.length > 0)
 }
 
-export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
-    return (x) => lazyP()(x)
-}
-
-
 const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
     alt(repeat1WithAcc(xs, x), succ(xs))
 const repeat1WithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
@@ -146,9 +146,6 @@ export function repeatSep<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]
 }
 export const repeatSepWithStr = <T>(x: Parser<T>, s: string) =>
     drop2(repeatSep(x, str(s)))
-
-export const once = <T>(p: Parser<T>) =>
-    withReader((reader) => p(reader).take(1))
 
 export const isLetter = (x: string) => /[\p{L}\p{M}]/u.test(x)
 export const isNumeral = (x: string) => /\p{N}/u.test(x)
