@@ -18,9 +18,9 @@ export class Extends {
     gapBefore: string;
     keyword: string;
     gapKeywordParents: string;
-    parents: string | string[];
+    parents: string | [string, string, string][];
 
-    constructor(gapBefore: string, keyword: string, gap: string, parents: string | string[]) {
+    constructor(gapBefore: string, keyword: string, gap: string, parents: string | [string, string, string][]) {
         this.gapBefore = gapBefore;
         this.keyword = keyword;
         this.gapKeywordParents = gap;
@@ -28,7 +28,21 @@ export class Extends {
     }
 
     public toString(): string {
-        return this.gapBefore + this.keyword + this.gapKeywordParents + (typeof this.parents === "string" ? this.parents : '(' + this.parents.join(',') + ')');
+        return (
+            this.gapBefore +
+            this.keyword +
+            this.gapKeywordParents +
+            (typeof this.parents === "string"
+                ? this.parents
+                : (
+                    '(' +
+                    this.parents
+                        .map((p) => p.join(""))
+                        .join(',') +
+                    ')'
+                )
+            )
+        );
     }
 }
 
@@ -91,7 +105,7 @@ export class PropertyLikeMember extends Member {
 
     toString(): string {
         return (
-            this.description.toString() + 
+            this.description.toString() +
             this.gapDescKeyword +
             `${this.keyword}${this.gapKeywordName}${this.name}${this.gapNameContent}${this.content};`
         );

@@ -1,5 +1,5 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { alt2, altN, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, join, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
+import { altN, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, join, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
 
 const rCommentStart = literal("/*");
 const rCommentContentUnit = altN(
@@ -49,12 +49,13 @@ const name = altN(
     symbol,
     singleLineString
 )
+const nameWithPad = seq(space, name, space)
 
-const nameList = drop13(
-    seq(literal("("), drop2(repeatSep(flatten(seq(space, name, space)), literal(","))), literal(")"))
+const nameList = seqDrop13(
+    literal("("), drop2(repeatSep(nameWithPad, literal(","))), literal(")")
 )
 
-const classExtendsValue = alt2(
+const classExtendsValue = altN(
     name,
     nameList
 );
@@ -82,7 +83,7 @@ const keywords = map(
     (parts) => new Keywords(...parts)
 )
 
-const propertyLikeMember = map(
+const mPropertyLike = map(
     seq(
         dComment,
         space,
@@ -111,7 +112,7 @@ const mForeignKey = map(
         LiTeRaL("foreignkey"),
         space1,
         name,
-        map(seq(literal('('), repeatSep(name, map(seq(space, literal(","), space), join)), literal(')')), ([_1, ids, _2]) => ids),
+        map(seq(literal('('), repeatSep(name, seqFlatten(space, literal(","), space)), literal(')')), ([_1, ids, _2]) => ids),
         space1,
         readWhile((x) => x !== ";"),
         literal(";")
@@ -178,7 +179,7 @@ const parameters = repeatSep(parameter, seqFlatten(space, literal(","), space));
 const parameterList = seqDrop15(
     literal('('), space, parameters, space, literal(')')
 )
-const methodSignature = seq(
+const mMethodSignature = seq(
     dComment,
     space,
     altN(
@@ -191,16 +192,16 @@ const methodSignature = seq(
     name,
     space,
     parameterList,
-    altN(annAs, succ("")),
+    optional(annAs, ""),
 )
 const mMethodBody = seqDrop13(
     literal('{'),
     anyBalanced,
     literal('}')
 )
-const mMethod = map(
+const mMethodLike = map(
     seq(
-        methodSignature,
+        mMethodSignature,
         optional(keywords),
         space,
         mMethodBody
@@ -210,7 +211,7 @@ const mMethod = map(
     }
 )
 
-const member = altN<Member>(propertyLikeMember, mForeignKey, mXData, mTrigger, mMethod)
+const member = altN<Member>(mPropertyLike, mForeignKey, mXData, mTrigger, mMethodLike)
 const members = repeatSep(space, member)
 
 const documentBlock: Parser<[string[], (string | Member)[]]> = map(

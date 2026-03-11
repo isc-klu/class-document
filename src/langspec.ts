@@ -104,7 +104,7 @@ export function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
     return g
 }
 
-export function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
+function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
     function* g(reader: Reader) {
         yield* p1(reader);
         yield* p2(reader);
@@ -191,6 +191,8 @@ export function seq<T>(...ps: Parser<T>[]): Parser<T[]> {
     return ps.reduceRight((acc, p) => map(seq2(p, acc), cons), succ([] as T[]));
 }
 
+export function altN<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2>;
+export function altN<T>(...ps: Parser<T>[]): Parser<T>;
 export function altN<T>(...ps: Parser<T>[]): Parser<T> {
     return ps.reduceRight((acc, p) => alt2(p, acc), fail);
 }
