@@ -1,5 +1,5 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { altN, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, join, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
+import { altN, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
 
 const rCommentStart = literal("/*");
 const rCommentContentUnit = altN(
@@ -156,26 +156,22 @@ const mTrigger = map(
     (parts) => new TriggerLikeMember(...parts)
 )
 
-const annOutputKeyword = altN(
-    LiTeRaL("Output"),
-    LiTeRaL("ByRef")
+const parameterAnnOutput = altN(
+    seqFlatten(LiTeRaL("Output"), space1),
+    seqFlatten(LiTeRaL("ByRef"), space1),
 )
-const annOutput = flatten(
-    seq(annOutputKeyword, space1)
-)
-const annAs = seqFlatten(
+const parameterAnnAs = seqFlatten(
     space, LiTeRaL("as"), space, anyBalanced
 )
-const annEq = seqFlatten(
+const parameterAnnEq = seqFlatten(
     space, literal("="), space, anyBalanced
 )
 const parameter = seqFlatten(
-    optional(annOutput), name, optional(annAs), optional(annEq)
+    optional(parameterAnnOutput), name, optional(parameterAnnAs), optional(parameterAnnEq)
 )
-const parameters = repeatSep(parameter, seqFlatten(space, literal(","), space));
-const parameterList = seqDrop15(
-    literal('('), space, parameters, space, literal(')')
-)
+const parameterWithPad = seq(space, parameter, space)
+const parameters = drop2(repeatSep(parameterWithPad, literal(",")));
+const parameterList = seqDrop13(literal('('), parameters, literal(')'))
 const mMethodSignature = seq(
     dComment,
     space,
@@ -189,7 +185,7 @@ const mMethodSignature = seq(
     name,
     space,
     parameterList,
-    optional(annAs, ""),
+    optional(parameterAnnAs, ""),
 )
 const mMethodBody = seqDrop13(
     literal('{'),

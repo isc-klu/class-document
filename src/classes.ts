@@ -210,9 +210,7 @@ export class MethodLikeMember extends Member {
     keywords: null | Keywords;
     content: string;
     gapNameParen: string;
-    gapParenParams: string;
-    parameters: [string[], string[]];
-    gapParamsParen: string;
+    parameters: [string, string, string][];
     typeAnn: string;
     constructor(
         description: Description,
@@ -221,9 +219,7 @@ export class MethodLikeMember extends Member {
         gapKeywordName: string,
         name: string,
         gapNameParen: string,
-        [gapParenParams, parameters, gapParamsParen]: [string,
-            [string[], string[]],
-            string],
+        parameters: [string, string, string][],
         typeAnn: string,
         keywords: null | Keywords,
         gapNameContent: string,
@@ -232,9 +228,7 @@ export class MethodLikeMember extends Member {
         super(description, gapDescKeyword, keyword, gapKeywordName, name, gapNameContent);
         this.keywords = keywords;
         this.gapNameParen = gapNameParen;
-        this.gapParenParams = gapParenParams;
         this.parameters = parameters;
-        this.gapParamsParen = gapParamsParen;
         this.typeAnn = typeAnn;
         this.content = content;
     }
@@ -248,9 +242,7 @@ export class MethodLikeMember extends Member {
             this.name +
             this.gapNameParen +
             '(' +
-            this.gapParenParams +
-            this.parameters[0].map((p, i) => (this.parameters[1][i - 1] ?? "") + p).join("") +
-            this.gapParamsParen +
+            this.parameters.map(([s1, x, s2]) => s1 + x + s2).join(",") +
             ')' +
             this.typeAnn +
             (this.keywords === null ? "" : this.keywords.toString()) +
