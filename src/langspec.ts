@@ -21,22 +21,23 @@ export class Reader {
     }
 
     public * read(n: number = 1): ResultSet<string> {
-        const result = this.content.slice(this.srcloc.absolute, this.srcloc.absolute + n);
         let { line, char, absolute } = this.srcloc;
-        for (; absolute < this.content.length && n > 0; n--) {
+        absolute += n;
+        if (absolute > this.content.length) {
+            return null
+        }
+        for (; n > 0; n--) {
             if (this.content[absolute] === "\n") {
                 line += 1;
                 char = 0;
             } else {
                 char += 1;
             }
-            absolute += 1;
         }
-        if (n === 0) {
-            const reader = new Reader(this.content, { line, char, absolute });
-            yield { reader, value: result }
-        }
-        return null;
+        yield { 
+            reader: new Reader(this.content, { line, char, absolute }),
+            value: this.content.slice(this.srcloc.absolute, absolute)
+        };
     }
 
     public atEnd(): boolean {
@@ -101,11 +102,11 @@ export function optional(p: Parser<any>, x: any = null): Parser<any> {
     return alt2(p, succ(x))
 }
 
-export function firstN(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
+export function readIf(n: number, p: (x: string) => boolean = (_) => true): Parser<string> {
     return filter(read(n), p)
 }
 
-export function chars(p: (x: string) => boolean = (_) => true): Parser<string> {
+export function readWhile(p: (x: string) => boolean = (_) => true): Parser<string> {
     function* g(reader: Reader) {
         let n = 0;
         while (reader.charAt(n).length > 0 && p(reader.charAt(n))) {
@@ -119,26 +120,16 @@ export function chars(p: (x: string) => boolean = (_) => true): Parser<string> {
     return g
 }
 
-export function someChars(p: (x: string) => boolean = (_) => true): Parser<string> {
-    function* g(reader: Reader) {
-        let n = 0;
-        while (reader.charAt(n).length > 0 && p(reader.charAt(n))) {
-            n++;
-        }
-        for (; n >= 1; n--) {
-            yield* reader.read(n)
-        }
-        return null;
-    }
-    return g
+export function readWhile1(p: (x: string) => boolean = (_) => true): Parser<string> {
+    return filter(readWhile(p), (x) => x.length > 0)
 }
 
-export function literal<T extends string>(x: T): Parser<T> {
-    return firstN(x.length, (y) => y === x) as Parser<T>;
+export function readStr<T extends string>(x: T): Parser<T> {
+    return readIf(x.length, (y) => y === x) as Parser<T>;
 }
 
-export function LiTeRaL<T extends string>(x: T): Parser<T> {
-    return firstN(x.length, (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase()) as Parser<T>;
+export function readStR<T extends string>(x: T): Parser<T> {
+    return readIf(x.length, (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase()) as Parser<T>;
 }
 
 export const join = (xs: string[]) => xs.join("")
@@ -220,34 +211,34 @@ export function takeAll<T>(r: ResultSet<T>): Result<T>[] {
 export const doubleQuotedContent = map(
     oneOff(repeat(alt(
         // backslash followed by anything but newline
-        firstN(2, (s) => /\\[^\n]/.test(s)),
+        readIf(2, (s) => /\\[^\n]/.test(s)),
         // anything but double quote or slash or newline
-        firstN(1, (c) => /[^\\\n"]/.test(c)),
+        readIf(1, (c) => /[^\\\n"]/.test(c)),
     ))),
     join
 )
 export const singleQuotedContent = map(
     oneOff(repeat(alt(
         // backslash followed by anything but newline
-        firstN(2, (s) => /\\[^\n]/.test(s)),
+        readIf(2, (s) => /\\[^\n]/.test(s)),
         // anything but double quote or slash or newline
-        firstN(1, (c) => /[^\\\n']/.test(c)),
+        readIf(1, (c) => /[^\\\n']/.test(c)),
     ))),
     join
 )
 export const singleLineString = alt(
-    map(seq(literal('"'), doubleQuotedContent, literal('"')), join),
-    map(seq(literal("'"), singleQuotedContent, literal("'")), join)
+    map(seq(readStr('"'), doubleQuotedContent, readStr('"')), join),
+    map(seq(readStr("'"), singleQuotedContent, readStr("'")), join)
 )
 export const anythingBalanced: Parser<string> = rec(() => map(
     repeat(
         alt(
-            oneOff(someChars((c) => /[^()\[\]\{\}<>"']/.test(c))),
+            oneOff(readWhile1((c) => /[^()\[\]\{\}<>"']/.test(c))),
             singleLineString,
-            map(seq(literal('('), anythingBalanced, literal(')')), join),
-            map(seq(literal('['), anythingBalanced, literal(']')), join),
-            map(seq(literal('{'), anythingBalanced, literal('}')), join),
-            map(seq(literal('<'), anythingBalanced, literal('>')), join),
+            map(seq(readStr('('), anythingBalanced, readStr(')')), join),
+            map(seq(readStr('['), anythingBalanced, readStr(']')), join),
+            map(seq(readStr('{'), anythingBalanced, readStr('}')), join),
+            map(seq(readStr('<'), anythingBalanced, readStr('>')), join),
         )
     ),
     join)

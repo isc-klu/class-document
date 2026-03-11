@@ -1,27 +1,27 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15, seqDrop2 } from "./langspec.js";
+import { anythingBalanced as anyBalanced, readWhile as readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, oneOff as once, optional, Reader, readWhile1 as readWhile1, repeat, repeat1, repeatSep, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15, seqDrop2 } from "./langspec.js";
 import { alt } from "./alt.js";
 import { seq } from "./seq.js";
 
-const rCommentStart = literal("/*");
+const rCommentStart = readStr("/*");
 const rCommentContentUnit = alt(
     once(readWhile1((c) => c !== "*")),
-    firstN(2, (s) => s != "*/"),
+    readIf(2, (s) => s != "*/"),
 )
 const rCommentContent = flatten(repeat(rCommentContentUnit));
-const rCommentEnd = literal("*/");
+const rCommentEnd = readStr("*/");
 const rComment = flatten(seq(rCommentStart, rCommentContent, rCommentEnd));
 
 const lCommentHead = alt(
-    literal("//"),
-    literal("#;")
+    readStr("//"),
+    readStr("#;")
 );
 const lCommentContent = alt(
     eof(""),
     succ(""),
-    flatten(seq(firstN(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL)))
+    flatten(seq(readIf(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL)))
 );
-const lComment = flatten(seq(lCommentHead, lCommentContent, literal("\n")))
+const lComment = flatten(seq(lCommentHead, lCommentContent, readStr("\n")))
 
 const spaceUnit = once(alt(
     readWhile1(isSpace),
@@ -31,7 +31,7 @@ const spaceUnit = once(alt(
 const space = flatten(repeat(spaceUnit));
 const space1 = flatten(repeat1(spaceUnit));
 
-const dependencyKeyword = alt(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator"));
+const dependencyKeyword = alt(readStR("import"), readStR("include"), readStR("includegenerator"));
 const dependency = map(
     seq(dependencyKeyword, space1, readWhile1(isButNL)),
     (parts) => new Dependency(...parts)
@@ -39,7 +39,7 @@ const dependency = map(
 const dependencies = repeat(dependency);
 
 const dCommentLine = flatten(
-    seq(readWhile(isSpaceButNL), literal("///"), readWhile(isButNL), literal("\n"))
+    seq(readWhile(isSpaceButNL), readStr("///"), readWhile(isButNL), readStr("\n"))
 );
 const dComment = map(
     repeat(dCommentLine),
@@ -54,24 +54,24 @@ const name = alt(
 const nameWithPad = seq(space, name, space)
 
 const nameList = seqDrop13(
-    literal("("), drop2(repeatSep(nameWithPad, literal(","))), literal(")")
+    readStr("("), drop2(repeatSep(nameWithPad, readStr(","))), readStr(")")
 )
 
 const clsType = anyBalanced
 
 const asType = seqFlatten(
-    space, LiTeRaL("as"), space, clsType
+    space, readStR("as"), space, clsType
 )
 
-const keywordValue = seqFlatten(space, literal("="), space, anyBalanced)
+const keywordValue = seqFlatten(space, readStr("="), space, anyBalanced)
 const keyword =
     alt(
         flatten(seq(name, optional(keywordValue, ""))),
-        flatten(seq(LiTeRaL("Not"), space1, name))
+        flatten(seq(readStR("Not"), space1, name))
     )
 const keywordWithPad = seq(space, keyword, space);
-const keywords = drop2(repeatSep(keywordWithPad, literal(",")));
-const keywordList = seqDrop13(literal("["), keywords, literal("]"));
+const keywords = drop2(repeatSep(keywordWithPad, readStr(",")));
+const keywordList = seqDrop13(readStr("["), keywords, readStr("]"));
 
 const annKeywords = map(
     seq(space, keywordList),
@@ -79,18 +79,18 @@ const annKeywords = map(
 )
 
 const parameterAnnOutput = alt(
-    seqFlatten(LiTeRaL("Output"), space1),
-    seqFlatten(LiTeRaL("ByRef"), space1),
+    seqFlatten(readStR("Output"), space1),
+    seqFlatten(readStR("ByRef"), space1),
 )
 const parameterAnnEq = seqFlatten(
-    space, literal("="), space, anyBalanced
+    space, readStr("="), space, anyBalanced
 )
 const parameter = seqFlatten(
     optional(parameterAnnOutput), name, optional(asType), optional(parameterAnnEq)
 )
 const parameterWithPad = seq(space, parameter, space)
-const parameters = drop2(repeatSep(parameterWithPad, literal(",")));
-const parameterList = seqDrop13(literal('('), parameters, literal(')'))
+const parameters = drop2(repeatSep(parameterWithPad, readStr(",")));
+const parameterList = seqDrop13(readStr('('), parameters, readStr(')'))
 
 const ancestor = alt(
     name,
@@ -98,7 +98,7 @@ const ancestor = alt(
 );
 
 const annExtends = map(
-    seq(space1, LiTeRaL("extends"), space1, ancestor),
+    seq(space1, readStR("extends"), space1, ancestor),
     (parts) => new Extends(...parts)
 )
 
@@ -106,18 +106,18 @@ const mPropertyLike = map(
     seqDrop2(
         seq(
             alt(
-                LiTeRaL("parameter"),
-                LiTeRaL("property"),
-                LiTeRaL("projection"),
-                LiTeRaL("index"),
-                LiTeRaL("foreignkey"),
-                LiTeRaL("relationship"),
+                readStR("parameter"),
+                readStR("property"),
+                readStR("projection"),
+                readStR("index"),
+                readStR("foreignkey"),
+                readStR("relationship"),
             ),
             space1,
             name,
             readWhile((x) => x !== ";"),
         ),
-        literal(";")
+        readStr(";")
     ),
     (parts) => {
         return new PropertyLikeMember(...parts)
@@ -127,14 +127,14 @@ const mPropertyLike = map(
 const mForeignKey = map(
     seqDrop2(
         seq(
-            LiTeRaL("foreignkey"),
+            readStR("foreignkey"),
             space1,
             name,
             nameList,
             space1,
             readWhile((x) => x !== ";"),
         ),
-        literal(";")
+        readStr(";")
     ),
     (parts) => {
         return new ForeignKeyLikeMember(...parts)
@@ -144,17 +144,17 @@ const mForeignKey = map(
 const mXData = map(
     seq(
         alt(
-            LiTeRaL("xdata"),
-            LiTeRaL("storage")
+            readStR("xdata"),
+            readStR("storage")
         ),
         space1,
         name,
         optional(annKeywords, null),
         space,
         seqDrop13(
-            literal('{'),
+            readStr('{'),
             anyBalanced,
-            literal('}')
+            readStr('}')
         )
     ),
     (parts) => {
@@ -164,28 +164,28 @@ const mXData = map(
 
 const mTrigger = map(
     seq(
-        LiTeRaL("trigger"),
+        readStR("trigger"),
         space1,
         name,
         optional(annKeywords),
         space,
-        drop13(seq(literal('{'), anyBalanced, literal('}')))
+        drop13(seq(readStr('{'), anyBalanced, readStr('}')))
     ),
     (parts) => new TriggerLikeMember(...parts)
 )
 
 const mMethodBody = seqDrop13(
-    literal('{'),
+    readStr('{'),
     anyBalanced,
-    literal('}')
+    readStr('}')
 )
 const mMethodLike = map(
     seq(
         alt(
-            LiTeRaL("trigger"),
-            LiTeRaL("method"),
-            LiTeRaL("classmethod"),
-            LiTeRaL("query")
+            readStR("trigger"),
+            readStR("method"),
+            readStR("classmethod"),
+            readStR("query")
         ),
         space1,
         name,
@@ -210,7 +210,7 @@ const memberWithComment = map(
     }
 )
 const members = repeatSep(space, memberWithComment)
-const memberList = seqDrop13(literal("{"), members, literal("}"))
+const memberList = seqDrop13(readStr("{"), members, readStr("}"))
 
 const document = map(
     seqDrop2(
@@ -220,7 +220,7 @@ const document = map(
             space,
             dComment,
             space,
-            LiTeRaL("class"),
+            readStR("class"),
             space1,
             name,
             optional(annExtends),
