@@ -1,5 +1,5 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { anythingBalanced as anyBalanced, readWhile as readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once as once, Reader, readWhile1 as readWhile1, repeat, repeat1, repeatSep, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15, seqDrop2 } from "./langspec.js";
+import { anyBalanced, readWhile, eof, readIf, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once, Reader, readWhile1, repeat, repeat1, repeatSep, simpleString, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr } from "./langspec.js";
 import { optional } from "./alt.js";
 import { alt } from "./alt.js";
 import { seq } from "./seq.js";
@@ -19,7 +19,7 @@ const lCommentHead = alt(
 );
 const lCommentContent = alt(
     eof(""),
-    succ(""),
+    readStr(""),
     flatten(seq(readIf(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL)))
 );
 const lComment = flatten(seq(lCommentHead, lCommentContent, readStr("\n")))
@@ -50,12 +50,12 @@ const dComment = map(
 const symbol = once(readWhile1((c) => isAlPhA(c) || isNumeral(c) || c === "%" || c === "." || c === "_"))
 const name = alt(
     symbol,
-    singleLineString
+    simpleString
 )
 const nameWithPad = seq(space, name, space)
 
 const nameList = seqDrop13(
-    readStr("("), drop2(repeatSep(nameWithPad, readStr(","))), readStr(")")
+    readStr("("), repeatSepWithStr(nameWithPad, ","), readStr(")")
 )
 
 const clsType = anyBalanced
@@ -71,7 +71,7 @@ const keyword =
         flatten(seq(readStR("Not"), space1, name))
     )
 const keywordWithPad = seq(space, keyword, space);
-const keywords = drop2(repeatSep(keywordWithPad, readStr(",")));
+const keywords = repeatSepWithStr(keywordWithPad, ",");
 const keywordList = seqDrop13(readStr("["), keywords, readStr("]"));
 
 const annKeywords = map(
@@ -90,7 +90,7 @@ const parameter = seqFlatten(
     optional(parameterAnnOutput), name, optional(asType), optional(parameterAnnEq)
 )
 const parameterWithPad = seq(space, parameter, space)
-const parameters = drop2(repeatSep(parameterWithPad, readStr(",")));
+const parameters = repeatSepWithStr(parameterWithPad, ",");
 const parameterList = seqDrop13(readStr('('), parameters, readStr(')'))
 
 const ancestor = alt(
@@ -170,7 +170,7 @@ const mTrigger = map(
         name,
         optional(annKeywords),
         space,
-        drop13(seq(readStr('{'), anyBalanced, readStr('}')))
+        seqDrop13(readStr('{'), anyBalanced, readStr('}'))
     ),
     (parts) => new TriggerLikeMember(...parts)
 )

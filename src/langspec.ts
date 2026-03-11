@@ -143,17 +143,11 @@ export function repeatSep<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]
         [[], []]
     )
 }
+export const repeatSepWithStr = <T>(x: Parser<T>, s: string) =>
+    drop2(repeatSep(x, readStr(s)))
 
-export const once = <T>(p: Parser<T>): Parser<T> => {
-    function* g(reader: Reader) {
-        for (const x of p(reader)) {
-            yield x;
-            return;
-        }
-        return;
-    }
-    return g
-}
+export const once = <T>(p: Parser<T>) =>
+    withReader((reader) => p(reader).take(1))
 
 export const isChar = (x: string) => x.length === 1
 export const isButNL = (x: string) => /[^\n]/.test(x)
@@ -213,19 +207,19 @@ export const singleQuotedContent = flatten(
         readIf(1, (c) => /[^\\\n']/.test(c)),
     )))
 )
-export const singleLineString = alt(
+export const simpleString = alt(
     seqFlatten(readStr('"'), doubleQuotedContent, readStr('"')),
     seqFlatten(readStr("'"), singleQuotedContent, readStr("'"))
 )
-export const anythingBalanced: Parser<string> = rec(() => flatten(
+export const anyBalanced: Parser<string> = rec(() => flatten(
     repeat(
         alt(
             once(readWhile1((c) => /[^()\[\]\{\}<>"']/.test(c))),
-            singleLineString,
-            seqFlatten(readStr('('), anythingBalanced, readStr(')')),
-            seqFlatten(readStr('['), anythingBalanced, readStr(']')),
-            seqFlatten(readStr('{'), anythingBalanced, readStr('}')),
-            seqFlatten(readStr('<'), anythingBalanced, readStr('>')),
+            simpleString,
+            seqFlatten(readStr('('), anyBalanced, readStr(')')),
+            seqFlatten(readStr('['), anyBalanced, readStr(']')),
+            seqFlatten(readStr('{'), anyBalanced, readStr('}')),
+            seqFlatten(readStr('<'), anyBalanced, readStr('>')),
         )
     )
 ))
