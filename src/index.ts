@@ -18,9 +18,9 @@ const lCommentHead = alt(
     readStr("#;")
 );
 const lCommentContent = alt(
-    eof(""),
+    flatten(seq(readIf(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL))),
     readStr(""),
-    flatten(seq(readIf(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL)))
+    eof(""),
 );
 const lComment = flatten(seq(lCommentHead, lCommentContent, readStr("\n")))
 
