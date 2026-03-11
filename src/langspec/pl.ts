@@ -31,21 +31,17 @@ export const isNonSpecialSymbol = (c: string) => (
     /[^()\[\]\{\}<>"']/u.test(c)
 )
 
-export const balancedElement = rec(() => map(alt(once(readWhile1(isLetter)),
+export const balancedElement = (alsoLetter: (c: string) => boolean = (_) => false) => rec(() => alt(
+    word(alsoLetter),
     once(readWhile1(isNumeral)),
     simpleString,
     seqFlatten(readStr('('), balanced, readStr(')')),
     seqFlatten(readStr('['), balanced, readStr(']')),
     seqFlatten(readStr('{'), balanced, readStr('}')),
     seqFlatten(readStr('<'), balanced, readStr('>'))
-),
-    (x) => {
-        // console.log(x)
-        return x;
-    }
 ));
 
-const balancedSection = flatten(once(repeat1(balancedElement)))
+const balancedSection = flatten(once(repeat1(balancedElement())))
 
 export const balanced: Parser<string> = rec(() => flatten(
     repeat(
@@ -56,3 +52,8 @@ export const balanced: Parser<string> = rec(() => flatten(
         )
     )
 ));
+
+export function word(alsoLetter: (c: string) => boolean): Parser<string> {
+    return once(readWhile1((c) => isLetter(c) || alsoLetter(c)));
+}
+

@@ -197,8 +197,8 @@ export function seqDrop2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
     return drop2(seq(p1, p2))
 }
 
-export function seqDrop13<T1, T2, T3>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>): Parser<T2> {
-    return drop13(seq(p1, p2, p3))
+export function seqDrop13<T>(p1: string, p2: Parser<T>, p3: string): Parser<T> {
+    return drop13(seq(readStr(p1), p2, readStr(p3)))
 }
 
 export function seqDrop15<T1, T2, T3, T4, T5>(p1: Parser<T1>, p2: Parser<T2>, p3: Parser<T3>, p4: Parser<T4>, p5: Parser<T5>): Parser<[T2, T3, T4]> {

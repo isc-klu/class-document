@@ -1,9 +1,10 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
 import { readWhile, eof, readIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, readStr, readStR, map, once, Reader, readWhile1, repeat, repeat1, repeatSep, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, isLetter, filter, dbg, type Parser } from "./langspec/index.js";
-import { balanced, balancedElement, simpleString } from "./langspec/pl.js";
+import { balanced, balancedElement, simpleString, word } from "./langspec/pl.js";
 import { alt, optional } from "./langspec/alt.js";
 import { seq } from "./langspec/seq.js";
 
+// Range Comment
 const rCommentStart = readStr("/*");
 const rCommentContentElem = alt(
     once(readWhile1((c) => c !== "*")),
@@ -13,6 +14,7 @@ const rCommentContent = flatten(repeat(rCommentContentElem));
 const rCommentEnd = readStr("*/");
 const rComment = flatten(seq(rCommentStart, rCommentContent, rCommentEnd));
 
+// Line Comment
 const lCommentHead = alt(
     readStr("//"),
     readStr("#;")
@@ -24,6 +26,7 @@ const lCommentContent = alt(
 );
 const lComment = flatten(seq(lCommentHead, lCommentContent, readStr("\n")))
 
+// Gap Between "Meaningful" Elements
 const gapElem = once(alt(
     readWhile1(isSpace),
     lComment,
@@ -32,6 +35,7 @@ const gapElem = once(alt(
 const gap = flatten(repeat(gapElem));
 const gap1 = flatten(repeat1(gapElem));
 
+// Document Dependencies (i.e., import, include, and includegenerator clauses)
 const dependencyKeyword = alt(readStR("import"), readStR("include"), readStR("includegenerator"));
 const dependency = map(
     seq(dependencyKeyword, gap1, readWhile1(isButNL)),
@@ -39,6 +43,7 @@ const dependency = map(
 );
 const dependencies = repeat(dependency);
 
+// Document Comments (only allowed before the class and class members)
 const dCommentLine = flatten(
     seq(readWhile(isSpaceButNL), readStr("///"), readWhile(isButNL), readStr("\n"))
 );
@@ -47,25 +52,24 @@ const dComment = map(
     (parts) => new Description(parts),
 )
 
-const symbol = once(readWhile1((c) => isLetter(c) || isNumeral(c) || c === "%" || c === "." || c === "_"))
 const name = alt(
-    symbol,
+    word((c) => isNumeral(c) || ["%", "."].includes(c)),
     simpleString
 )
 
+const nameWithPad = seq(gap, name, gap)
+const nameList = seqDrop13(
+    "(", repeatSepWithStr(nameWithPad, ","), ")"
+)
+
 const value = flatten(once(repeat1(alt(
-    balancedElement,
+    balancedElement(),
     readStr("/"),
     readStr("_"),
     readStr("-"),
     readStr("."),
     readStr("%")
 ))));
-
-const nameWithPad = seq(gap, name, gap)
-const nameList = seqDrop13(
-    readStr("("), repeatSepWithStr(nameWithPad, ","), readStr(")")
-)
 
 const typeParamWithPad = seqFlatten(gap, value, gap, readStr("="), gap, value, gap)
 const typeParamList = seqFlatten(
@@ -95,7 +99,7 @@ const annKeywords = (keywordName: Parser<string>) => {
         )
     const keywordWithPad = seq(gap, keywordClause, gap);
     const keywords = alt(repeatSepWithStr(keywordWithPad, ","), gap);
-    const keywordList = seqDrop13(readStr("["), keywords, readStr("]"));
+    const keywordList = seqDrop13("[", keywords, "]");
     const annKeywords = map(
         seq(gap, keywordList),
         (parts) => new Keywords(...parts)
@@ -209,7 +213,7 @@ const parameter = seqFlatten(
 )
 const parameterWithPad = seq(gap, parameter, gap)
 const parameters = once(repeatSepWithStr(parameterWithPad, ","));
-const parameterList = seqDrop13(readStr('('), parameters, readStr(')'))
+const parameterList = seqDrop13('(', parameters, ')')
 
 const ancestor = alt(
     name,
@@ -256,13 +260,13 @@ const mForeignKey = map(
             ),
             name,
             optional(
-                seqDrop13(
-                    seqFlatten(
-                        gap,
-                        readStr("(")
-                    ),
-                    name,
-                    readStr(")"),
+                seqFlatten(
+                    gap,
+                    seqDrop13(
+                        "(",
+                        name,
+                        ")",
+                    )
                 )
             ),
             memberAnnKeywords,
@@ -285,9 +289,9 @@ const mXData = map(
         optional(memberAnnKeywords, null),
         gap,
         seqDrop13(
-            readStr('{'),
+            '{',
             balanced,
-            readStr('}')
+            '}'
         )
     ),
     (parts) => {
@@ -302,16 +306,12 @@ const mTrigger = map(
         name,
         optional(memberAnnKeywords),
         gap,
-        seqDrop13(readStr('{'), balanced, readStr('}'))
+        seqDrop13('{', balanced, '}')
     ),
     (parts) => new TriggerLikeMember(...parts)
 )
 
-const mMethodBody = seqDrop13(
-    readStr('{'),
-    balanced,
-    readStr('}')
-)
+const mMethodBody = seqDrop13('{', balanced, '}')
 const mMethodLike = map(
     seq(
         alt(
@@ -343,7 +343,7 @@ const memberWithComment = map(
     }
 )
 const members = repeatSep(gap, memberWithComment)
-const memberList = seqDrop13(readStr("{"), members, readStr("}"))
+const memberList = seqDrop13("{", members, "}")
 
 const document = map(
     seqDrop2(
