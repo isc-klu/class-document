@@ -1,343 +1,346 @@
 export class Dependency {
-    keyword: string;
-    space: string;
-    content: string;
-    constructor(keyword: string, space: string, content: string) {
-        this.keyword = keyword;
-        this.space = space;
-        this.content = content;
-    }
+  keyword: string;
+  space: string;
+  content: string;
+  constructor(keyword: string, space: string, content: string) {
+    this.keyword = keyword;
+    this.space = space;
+    this.content = content;
+  }
 
-    toString(): string {
-        return (
-            this.keyword +
-            this.space +
-            this.content
-        );
-    }
+  toString(): string {
+    return this.keyword + this.space + this.content;
+  }
 }
 
 export class Extends {
-    gapBefore: string;
-    keyword: string;
-    gapKeywordParents: string;
-    parents: string | [string, string, string][];
+  gapBefore: string;
+  keyword: string;
+  gapKeywordParents: string;
+  parents: string | [string, string, string][];
 
-    constructor(gapBefore: string, keyword: string, gap: string, parents: string | [string, string, string][]) {
-        this.gapBefore = gapBefore;
-        this.keyword = keyword;
-        this.gapKeywordParents = gap;
-        this.parents = parents;
-    }
+  constructor(
+    gapBefore: string,
+    keyword: string,
+    gap: string,
+    parents: string | [string, string, string][],
+  ) {
+    this.gapBefore = gapBefore;
+    this.keyword = keyword;
+    this.gapKeywordParents = gap;
+    this.parents = parents;
+  }
 
-    public toString(): string {
-        return (
-            this.gapBefore +
-            this.keyword +
-            this.gapKeywordParents +
-            (typeof this.parents === "string"
-                ? this.parents
-                : (
-                    '(' +
-                    this.parents
-                        .map((p) => p.join(""))
-                        .join(',') +
-                    ')'
-                )
-            )
-        );
-    }
+  public toString(): string {
+    return (
+      this.gapBefore +
+      this.keyword +
+      this.gapKeywordParents +
+      (typeof this.parents === "string"
+        ? this.parents
+        : "(" + this.parents.map((p) => p.join("")).join(",") + ")")
+    );
+  }
 }
 
 export class Keywords {
-    gapBefore: string;
-    // String when the keywords is essentially empty -- need a string to describe the gap between []
-    keywords: [string, string, string][] | string;
+  gapBefore: string;
+  // String when the keywords is essentially empty -- need a string to describe the gap between []
+  keywords: [string, string, string][] | string;
 
-    constructor(gapBefore: string, keywords: [string, string, string][] | string) {
-        this.gapBefore = gapBefore;
-        this.keywords = keywords;
-    }
+  constructor(
+    gapBefore: string,
+    keywords: [string, string, string][] | string,
+  ) {
+    this.gapBefore = gapBefore;
+    this.keywords = keywords;
+  }
 
-    public toString(): string {
-        return (
-            this.gapBefore +
-            '[' +
-            (
-                typeof this.keywords === "string"
-                ? this.keywords
-                : this.keywords.map(([s1, k, s2]) => s1 + k + s2).join(',')
-            ) +
-            ']'
-        );
-    }
+  public toString(): string {
+    return (
+      this.gapBefore +
+      "[" +
+      (typeof this.keywords === "string"
+        ? this.keywords
+        : this.keywords.map(([s1, k, s2]) => s1 + k + s2).join(",")) +
+      "]"
+    );
+  }
 }
 
 export class Description {
-    lines: string[];
+  lines: string[];
 
-    constructor(lines: string[]) {
-        this.lines = lines;
-    }
+  constructor(lines: string[]) {
+    this.lines = lines;
+  }
 
-    public toString(): string {
-        return this.lines.join('');
-    }
+  public toString(): string {
+    return this.lines.join("");
+  }
 }
 
 export abstract class Member {
-    description!: Description;
-    gapDescriptionKeyword!: string;
-    keyword: string;
-    gapKeywordName: string;
-    name: string;
-    gapNameContent: string;
-    constructor(keyword: string, gapKeywordName: string, name: string, gapNameContent: string) {
-        this.keyword = keyword;
-        this.gapKeywordName = gapKeywordName;
-        this.name = name;
-        this.gapNameContent = gapNameContent;
-    }
+  description!: Description;
+  gapDescriptionKeyword!: string;
+  keyword: string;
+  gapKeywordName: string;
+  name: string;
+  gapNameContent: string;
+  constructor(
+    keyword: string,
+    gapKeywordName: string,
+    name: string,
+    gapNameContent: string,
+  ) {
+    this.keyword = keyword;
+    this.gapKeywordName = gapKeywordName;
+    this.name = name;
+    this.gapNameContent = gapNameContent;
+  }
 
-    setDescription(description: Description, gapDescriptionKeyword: string) {
-        this.description = description;
-        this.gapDescriptionKeyword = gapDescriptionKeyword;
-    }
+  setDescription(description: Description, gapDescriptionKeyword: string) {
+    this.description = description;
+    this.gapDescriptionKeyword = gapDescriptionKeyword;
+  }
 
-    addDescription(text: string): string {
-        return (
-            this.description.toString() +
-            this.gapDescriptionKeyword +
-            text
-        )
-    }
+  addDescription(text: string): string {
+    return this.description.toString() + this.gapDescriptionKeyword + text;
+  }
 }
 
 export class PropertyLikeMember extends Member {
-    content: string;
-    constructor(keyword: string, gapKeywordName: string, name: string, content: string) {
-        super(keyword, gapKeywordName, name, "");
-        this.content = content;
-    }
+  content: string;
+  constructor(
+    keyword: string,
+    gapKeywordName: string,
+    name: string,
+    content: string,
+  ) {
+    super(keyword, gapKeywordName, name, "");
+    this.content = content;
+  }
 
-    toString(): string {
-        return this.addDescription(
-            this.keyword +
-            this.gapKeywordName +
-            this.name +
-            this.gapNameContent +
-            this.content +
-            ";"
-        );
-    }
+  toString(): string {
+    return this.addDescription(
+      this.keyword +
+        this.gapKeywordName +
+        this.name +
+        this.gapNameContent +
+        this.content +
+        ";",
+    );
+  }
 }
 
 export class ForeignKeyLikeMember extends Member {
-    ids: [string, string, string][];
-    referencedClass: string;
-    refIndex: string | null;
-    keywordList: Keywords | null;
-    constructor(
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        ids: [string, string, string][],
-        gapNameContent: string,
-        referencedClass: string,
-        refIndex: string | null,
-        keywordList: Keywords | null,
-    ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
-        this.ids = ids;
-        this.referencedClass = referencedClass;
-        this.refIndex = refIndex;
-        this.keywordList = keywordList;
-    }
+  ids: [string, string, string][];
+  referencedClass: string;
+  refIndex: string | null;
+  keywordList: Keywords | null;
+  constructor(
+    keyword: string,
+    gapKeywordName: string,
+    name: string,
+    ids: [string, string, string][],
+    gapNameContent: string,
+    referencedClass: string,
+    refIndex: string | null,
+    keywordList: Keywords | null,
+  ) {
+    super(keyword, gapKeywordName, name, gapNameContent);
+    this.ids = ids;
+    this.referencedClass = referencedClass;
+    this.refIndex = refIndex;
+    this.keywordList = keywordList;
+  }
 
-    toString(): string {
-        return this.addDescription(
-            this.keyword +
-            this.gapKeywordName +
-            this.name +
-            '(' +
-            this.ids.map(([s1, x, s2]) => s1 + x + s2).join(",") +
-            ')' +
-            this.gapNameContent +
-            this.referencedClass + 
-            (this.refIndex === null ? "" : "(" + this.refIndex + ")") +
-            (this.keywordList === null ? "" : this.keywordList.toString()) +
-            ';'
-        );
-    }
+  toString(): string {
+    return this.addDescription(
+      this.keyword +
+        this.gapKeywordName +
+        this.name +
+        "(" +
+        this.ids.map(([s1, x, s2]) => s1 + x + s2).join(",") +
+        ")" +
+        this.gapNameContent +
+        this.referencedClass +
+        (this.refIndex === null ? "" : "(" + this.refIndex + ")") +
+        (this.keywordList === null ? "" : this.keywordList.toString()) +
+        ";",
+    );
+  }
 }
 
 export class XDataLikeMember extends Member {
-    keywords: null | Keywords;
-    content: string;
-    constructor(
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        keywords: null | Keywords,
-        gapNameContent: string,
-        content: string
-    ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
-        this.keywords = keywords;
-        this.content = content;
-    }
+  keywords: null | Keywords;
+  content: string;
+  constructor(
+    keyword: string,
+    gapKeywordName: string,
+    name: string,
+    keywords: null | Keywords,
+    gapNameContent: string,
+    content: string,
+  ) {
+    super(keyword, gapKeywordName, name, gapNameContent);
+    this.keywords = keywords;
+    this.content = content;
+  }
 
-    toString(): string {
-        return this.addDescription(
-            this.keyword +
-            this.gapKeywordName +
-            this.name +
-            (this.keywords === null ? "" : this.keywords.toString()) +
-            this.gapNameContent +
-            "{" +
-            this.content +
-            "}"
-        );
-    }
+  toString(): string {
+    return this.addDescription(
+      this.keyword +
+        this.gapKeywordName +
+        this.name +
+        (this.keywords === null ? "" : this.keywords.toString()) +
+        this.gapNameContent +
+        "{" +
+        this.content +
+        "}",
+    );
+  }
 }
 
 export class TriggerLikeMember extends Member {
-    keywords: null | Keywords;
-    content: string;
-    constructor(
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        keywords: null | Keywords,
-        gapNameContent: string,
-        content: string
-    ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
-        this.keywords = keywords;
-        this.content = content;
-    }
+  keywords: null | Keywords;
+  content: string;
+  constructor(
+    keyword: string,
+    gapKeywordName: string,
+    name: string,
+    keywords: null | Keywords,
+    gapNameContent: string,
+    content: string,
+  ) {
+    super(keyword, gapKeywordName, name, gapNameContent);
+    this.keywords = keywords;
+    this.content = content;
+  }
 
-    toString(): string {
-        return this.addDescription(
-            this.keyword +
-            this.gapKeywordName +
-            this.name +
-            (this.keywords === null ? "" : this.keywords.toString()) +
-            this.gapNameContent +
-            "{" +
-            this.content +
-            "}"
-        );
-    }
+  toString(): string {
+    return this.addDescription(
+      this.keyword +
+        this.gapKeywordName +
+        this.name +
+        (this.keywords === null ? "" : this.keywords.toString()) +
+        this.gapNameContent +
+        "{" +
+        this.content +
+        "}",
+    );
+  }
 }
 
 export class MethodLikeMember extends Member {
-    keywords: null | Keywords;
-    content: string;
-    gapNameParen: string;
-    parameters: [string, string, string][];
-    typeAnn: string | null;
-    constructor(
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        gapNameParen: string,
-        parameters: [string, string, string][],
-        typeAnn: string | null,
-        keywords: null | Keywords,
-        gapNameContent: string,
-        content: string
-    ) {
-        super(keyword, gapKeywordName, name, gapNameContent);
-        this.keywords = keywords;
-        this.gapNameParen = gapNameParen;
-        this.parameters = parameters;
-        this.typeAnn = typeAnn;
-        this.content = content;
-    }
+  keywords: null | Keywords;
+  content: string;
+  gapNameParen: string;
+  parameters: [string, string, string][];
+  typeAnn: string | null;
+  constructor(
+    keyword: string,
+    gapKeywordName: string,
+    name: string,
+    gapNameParen: string,
+    parameters: [string, string, string][],
+    typeAnn: string | null,
+    keywords: null | Keywords,
+    gapNameContent: string,
+    content: string,
+  ) {
+    super(keyword, gapKeywordName, name, gapNameContent);
+    this.keywords = keywords;
+    this.gapNameParen = gapNameParen;
+    this.parameters = parameters;
+    this.typeAnn = typeAnn;
+    this.content = content;
+  }
 
-    toString(): string {
-        return this.addDescription(
-            this.keyword +
-            this.gapKeywordName +
-            this.name +
-            this.gapNameParen +
-            '(' +
-            this.parameters.map(([s1, x, s2]) => s1 + x + s2).join(",") +
-            ')' +
-            (this.typeAnn ?? "") +
-            (this.keywords === null ? "" : this.keywords.toString()) +
-            this.gapNameContent +
-            "{" +
-            this.content +
-            "}"
-        );
-    }
+  toString(): string {
+    return this.addDescription(
+      this.keyword +
+        this.gapKeywordName +
+        this.name +
+        this.gapNameParen +
+        "(" +
+        this.parameters.map(([s1, x, s2]) => s1 + x + s2).join(",") +
+        ")" +
+        (this.typeAnn ?? "") +
+        (this.keywords === null ? "" : this.keywords.toString()) +
+        this.gapNameContent +
+        "{" +
+        this.content +
+        "}",
+    );
+  }
 }
 
 export class Document {
-    gapBeforeDeps: string;
-    dependencies: (Dependency | string)[];
-    gapDepsDesc: string;
-    description: Description;
-    gapDescKeyword: string;
-    keyword: string;
-    gapKeywordName: string;
-    name: string;
-    extends: null | Extends;
-    keywords: null | Keywords;
-    gapKeywordsBegin: string;
-    members: [string[], Member[]];
-    gapAfterClass: string;
+  gapBeforeDeps: string;
+  dependencies: (Dependency | string)[];
+  gapDepsDesc: string;
+  description: Description;
+  gapDescKeyword: string;
+  keyword: string;
+  gapKeywordName: string;
+  name: string;
+  extends: null | Extends;
+  keywords: null | Keywords;
+  gapKeywordsBegin: string;
+  members: [string[], Member[]];
+  gapAfterClass: string;
 
-    constructor(
-        gapBeforeDeps: string,
-        dependencies: (Dependency | string)[],
-        gapDepsDesc: string,
-        description: Description,
-        gapDescKeyword: string,
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        ext: null | Extends,
-        keywords: null | Keywords,
-        gapKeywordsBegin: string,
-        members: [string[], Member[]],
-        gapAfterClass: string
-    ) {
-        this.gapBeforeDeps = gapBeforeDeps;
-        this.dependencies = dependencies;
-        this.gapDepsDesc = gapDepsDesc;
-        this.description = description;
-        this.gapDescKeyword = gapDescKeyword;
-        this.keyword = keyword;
-        this.gapKeywordName = gapKeywordName;
-        this.name = name;
-        this.extends = ext;
-        this.keywords = keywords;
-        this.gapKeywordsBegin = gapKeywordsBegin;
-        this.members = members;
-        this.gapAfterClass = gapAfterClass;
-    }
+  constructor(
+    gapBeforeDeps: string,
+    dependencies: (Dependency | string)[],
+    gapDepsDesc: string,
+    description: Description,
+    gapDescKeyword: string,
+    keyword: string,
+    gapKeywordName: string,
+    name: string,
+    ext: null | Extends,
+    keywords: null | Keywords,
+    gapKeywordsBegin: string,
+    members: [string[], Member[]],
+    gapAfterClass: string,
+  ) {
+    this.gapBeforeDeps = gapBeforeDeps;
+    this.dependencies = dependencies;
+    this.gapDepsDesc = gapDepsDesc;
+    this.description = description;
+    this.gapDescKeyword = gapDescKeyword;
+    this.keyword = keyword;
+    this.gapKeywordName = gapKeywordName;
+    this.name = name;
+    this.extends = ext;
+    this.keywords = keywords;
+    this.gapKeywordsBegin = gapKeywordsBegin;
+    this.members = members;
+    this.gapAfterClass = gapAfterClass;
+  }
 
-    public toString(): string {
-        // console.log("The dependencies are:", JSON.stringify(this.dependencies))
-        return (
-            this.gapBeforeDeps +
-            this.dependencies.map((x) => x.toString()).join("") +
-            this.gapDepsDesc +
-            this.description.toString() +
-            this.gapDescKeyword +
-            this.keyword +
-            this.gapKeywordName +
-            this.name +
-            (this.extends === null ? '' : this.extends.toString()) +
-            (this.keywords === null ? '' : this.keywords.toString()) +
-            this.gapKeywordsBegin +
-            '{' +
-            this.members[0].map((x, i) => (this.members[1][i - 1]?.toString() ?? "") + x).join("") +
-            '}' +
-            this.gapAfterClass
-        );
-    }
+  public toString(): string {
+    // console.log("The dependencies are:", JSON.stringify(this.dependencies))
+    return (
+      this.gapBeforeDeps +
+      this.dependencies.map((x) => x.toString()).join("") +
+      this.gapDepsDesc +
+      this.description.toString() +
+      this.gapDescKeyword +
+      this.keyword +
+      this.gapKeywordName +
+      this.name +
+      (this.extends === null ? "" : this.extends.toString()) +
+      (this.keywords === null ? "" : this.keywords.toString()) +
+      this.gapKeywordsBegin +
+      "{" +
+      this.members[0]
+        .map((x, i) => (this.members[1][i - 1]?.toString() ?? "") + x)
+        .join("") +
+      "}" +
+      this.gapAfterClass
+    );
+  }
 }
