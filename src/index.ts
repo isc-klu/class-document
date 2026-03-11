@@ -27,7 +27,7 @@ import {
     repeat,
     repeat1,
     repeatSep,
-    seqFlatten,
+    seqJoin,
     seqDrop13,
     seqDrop2,
     repeatSepWithStr,
@@ -113,18 +113,18 @@ const value = flatten(
     ),
 );
 
-const typeParamWithPad = seqFlatten(gap, value, gap, str('='), gap, value, gap);
-const typeParamList = seqFlatten(
+const typeParamWithPad = seqJoin(gap, value, gap, str('='), gap, value, gap);
+const typeParamList = seqJoin(
     str('('),
     repeatSepWithStr(typeParamWithPad, ',').map((xs) => xs.join(',')),
     str(')'),
 );
-const clsType = seqFlatten(value, optional(seqFlatten(gap, typeParamList), ''));
+const clsType = seqJoin(value, optional(seqJoin(gap, typeParamList), ''));
 
-const asType = seqFlatten(gap, StR('as'), gap, clsType);
+const annType = seqJoin(gap, StR('as'), gap, clsType);
 
 const annKeywords = (keywordName: Parser<string>) => {
-    const keywordValueAnn = seqFlatten(gap, str('='), gap, value);
+    const keywordValueAnn = seqJoin(gap, str('='), gap, value);
     const keywordClause = alt(
         flatten(seq(keywordName, optional(keywordValueAnn, ''))),
         flatten(seq(StR('Not'), gap1, keywordName)),
@@ -138,7 +138,7 @@ const annKeywords = (keywordName: Parser<string>) => {
     return annKeywords;
 };
 
-const classAnnKeywords = annKeywords(
+const annKeywordsForClass = annKeywords(
     alt(
         StR('Abstract'),
         StR('ClassType'),
@@ -173,7 +173,7 @@ const classAnnKeywords = annKeywords(
     ),
 );
 
-const methodAnnKeywords = annKeywords(
+const annKeywordsForMethodLike = annKeywords(
     alt(
         StR('Abstract'),
         StR('ClientName'),
@@ -205,22 +205,22 @@ const methodAnnKeywords = annKeywords(
         StR('WebMethod'),
     ),
 );
-const memberAnnKeywords = annKeywords(name);
+const annKeywordForMember = annKeywords(name);
 
-const parameterAnnOutput = alt(
-    seqFlatten(StR('Output'), gap1),
-    seqFlatten(StR('ByRef'), gap1),
+const annArgMode = alt(
+    seqJoin(StR('Output'), gap1),
+    seqJoin(StR('ByRef'), gap1),
 );
-const parameterAnnEq = seqFlatten(gap, str('='), gap, balanced);
-const parameter = seqFlatten(
-    optional(parameterAnnOutput),
+const annArgDefault = seqJoin(gap, str('='), gap, value);
+const arg = seqJoin(
+    optional(annArgMode),
     name,
-    optional(asType),
-    optional(parameterAnnEq),
+    optional(annType),
+    optional(annArgDefault),
 );
-const parameterWithPad = seq(gap, parameter, gap);
-const parameters = once(repeatSepWithStr(parameterWithPad, ','));
-const parameterList = seqDrop13('(', parameters, ')');
+const argWithPad = seq(gap, arg, gap);
+const args = once(repeatSepWithStr(argWithPad, ','));
+const argList = seqDrop13('(', args, ')');
 
 const ancestor = alt(name, nameList);
 
@@ -228,7 +228,7 @@ const annExtends = seq(gap1, StR('extends'), gap1, ancestor).map(
     (parts) => new Extends(...parts),
 );
 
-const annValue = seq(seqFlatten(gap, str('='), gap), value).map(
+const annValue = seq(seqJoin(gap, str('='), gap), value).map(
     (parts) => new AnnValue(...parts),
 );
 
@@ -237,7 +237,7 @@ const mParameter = seqDrop2(
         StR('Parameter'),
         gap1,
         name,
-        optional(asType),
+        optional(annType),
         optional(annKeywords(name)),
         optional(annValue),
         gap,
@@ -247,14 +247,14 @@ const mParameter = seqDrop2(
     return new MParameter(...parts);
 });
 
-const propertyCollection = seqFlatten(
+const propertyCollection = seqJoin(
     gap1,
     alt(StR('List'), StR('Array')),
     gap1,
     StR('Of'),
 );
 
-const asPropertyType = seqFlatten(
+const asPropertyType = seqJoin(
     gap,
     StR('as'),
     optional(propertyCollection, ''),
@@ -299,10 +299,10 @@ const mForeignKey = seqDrop2(
         gap1,
         name,
         filter(nameList, (ns) => ns.length > 0),
-        seqFlatten(gap1, StR('References'), gap1),
+        seqJoin(gap1, StR('References'), gap1),
         name,
-        optional(seqFlatten(gap, seqDrop13('(', name, ')'))),
-        memberAnnKeywords,
+        optional(seqJoin(gap, seqDrop13('(', name, ')'))),
+        annKeywordForMember,
     ),
     str(';'),
 ).map((parts) => {
@@ -313,7 +313,7 @@ const mXData = seq(
     alt(StR('xdata'), StR('storage')),
     gap1,
     name,
-    optional(memberAnnKeywords, null),
+    optional(annKeywordForMember, null),
     gap,
     seqDrop13('{', balanced, '}'),
 ).map((parts) => {
@@ -324,22 +324,22 @@ const mTrigger = seq(
     StR('trigger'),
     gap1,
     name,
-    optional(memberAnnKeywords),
+    optional(annKeywordForMember),
     gap,
     seqDrop13('{', balanced, '}'),
 ).map((parts) => new MTrigger(...parts));
 
-const mMethodBody = seqDrop13('{', balanced, '}');
+const methodBody = seqDrop13('{', balanced, '}');
 const mMethodLike = seq(
     alt(StR('trigger'), StR('method'), StR('classmethod'), StR('query')),
     gap1,
     name,
     gap,
-    parameterList,
-    optional(asType),
-    optional(methodAnnKeywords),
+    argList,
+    optional(annType),
+    optional(annKeywordsForMethodLike),
     gap,
-    mMethodBody,
+    methodBody,
 ).map((parts) => {
     return new MethodLikeMember(...parts);
 });
@@ -372,7 +372,7 @@ const document = seqDrop2(
         gap1,
         name,
         optional(annExtends),
-        optional(classAnnKeywords),
+        optional(annKeywordsForClass),
         gap,
         memberList,
         gap,

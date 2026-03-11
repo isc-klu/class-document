@@ -3,7 +3,7 @@ import {
     flatten,
     repeat,
     strIf,
-    seqFlatten,
+    seqJoin,
     str,
     strWhile1,
     isLetter,
@@ -38,12 +38,12 @@ export const singleQuotedContent = flatten(
         ),
     ),
 );
-export const simpleDQString = seqFlatten(
+export const simpleDQString = seqJoin(
     str('"'),
     doubleQuotedContent,
     str('"'),
 );
-export const simpleSQString = seqFlatten(
+export const simpleSQString = seqJoin(
     str("'"),
     singleQuotedContent,
     str("'"),
@@ -61,10 +61,10 @@ export const balancedElement = (
             word(alsoLetter),
             once(strWhile1(isNumeral)),
             simpleString,
-            seqFlatten(str('('), balanced, str(')')),
-            seqFlatten(str('['), balanced, str(']')),
-            seqFlatten(str('{'), balanced, str('}')),
-            seqFlatten(str('<'), balanced, str('>')),
+            seqJoin(str('('), balanced, str(')')),
+            seqJoin(str('['), balanced, str(']')),
+            seqJoin(str('{'), balanced, str('}')),
+            seqJoin(str('<'), balanced, str('>')),
         ),
     );
 
