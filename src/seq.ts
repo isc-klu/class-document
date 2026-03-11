@@ -1,4 +1,19 @@
-import { type Parser, map, seq2, cons, succ } from "./langspec.js";
+import { type Parser, map, cons, succ, Reader, type Result } from "./langspec.js";
+
+function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
+    function* g(reader: Reader): Generator<Result<[T1, T2]>> {
+        for (const o1 of p1(reader)) {
+            for (const o2 of p2(o1.reader)) {
+                yield {
+                    reader: o2.reader,
+                    value: [o1.value, o2.value]
+                };
+            }
+        }
+        return;
+    }
+    return g;
+}
 
 export function seq<T>(): Parser<T[]>;
 

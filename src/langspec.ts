@@ -91,21 +91,6 @@ export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
     })
 }
 
-export function seq2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<[T1, T2]> {
-    function* g(reader: Reader): Generator<Result<[T1, T2]>> {
-        for (const o1 of p1(reader)) {
-            for (const o2 of p2(o1.reader)) {
-                yield {
-                    reader: o2.reader,
-                    value: [o1.value, o2.value]
-                }
-            }
-        }
-        return;
-    }
-    return g
-}
-
 function alt2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
     function* g(reader: Reader) {
         yield* p1(reader);
@@ -119,9 +104,9 @@ export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
     return (x) => lazyP()(x)
 }
 
-export function altN<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2>;
-export function altN<T>(...ps: Parser<T>[]): Parser<T>;
-export function altN<T>(...ps: Parser<T>[]): Parser<T> {
+export function alt<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2>;
+export function alt<T>(...ps: Parser<T>[]): Parser<T>;
+export function alt<T>(...ps: Parser<T>[]): Parser<T> {
     return ps.reduceRight((acc, p) => alt2(p, acc), fail);
 }
 
@@ -196,12 +181,12 @@ export function repeat<T>(x: Parser<T>): Parser<T[]> {
 }
 
 export const repeat1 = <T>(p: Parser<T>) => {
-    return map(seq2(p, repeat(p)), cons)
+    return map(seq(p, repeat(p)), cons)
 }
 
 export function repeatSep<I, S>(pi: Parser<I>, ps: Parser<S>): Parser<[I[], S[]]> {
     return optional(
-        map(seq2(pi, repeat(seq2(ps, pi))), ([x, xys]) => {
+        map(seq(pi, repeat(seq(ps, pi))), ([x, xys]) => {
             const xs: I[] = [x];
             const ys: S[] = [];
             for (const [y, x] of xys) {
@@ -247,7 +232,7 @@ export function takeAll<T>(r: ResultSet<T>): Result<T>[] {
 }
 
 export const doubleQuotedContent = map(
-    oneOff(repeat(altN(
+    oneOff(repeat(alt(
         // backslash followed by anything but newline
         firstN(2, (s) => /\\[^\n]/.test(s)),
         // anything but double quote or slash or newline
@@ -256,7 +241,7 @@ export const doubleQuotedContent = map(
     join
 )
 export const singleQuotedContent = map(
-    oneOff(repeat(altN(
+    oneOff(repeat(alt(
         // backslash followed by anything but newline
         firstN(2, (s) => /\\[^\n]/.test(s)),
         // anything but double quote or slash or newline
@@ -264,13 +249,13 @@ export const singleQuotedContent = map(
     ))),
     join
 )
-export const singleLineString = altN(
+export const singleLineString = alt(
     map(seq(literal('"'), doubleQuotedContent, literal('"')), join),
     map(seq(literal("'"), singleQuotedContent, literal("'")), join)
 )
 export const anythingBalanced: Parser<string> = rec(() => map(
     repeat(
-        altN(
+        alt(
             oneOff(someChars((c) => /[^()\[\]\{\}<>"']/.test(c))),
             singleLineString,
             map(seq(literal('('), anythingBalanced, literal(')')), join),
