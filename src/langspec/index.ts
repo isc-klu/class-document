@@ -159,15 +159,8 @@ export const isChar = (x: string) => x.length === 1
 export const isButNL = (x: string) => /[^\n]/.test(x)
 export const isSpaceButNL = (x: string) => /[\t\r ]/.test(x)
 
-export function take1<T>(r: ResultSet<T>): Result<T> | null {
-    for (const o of r) {
-        return o;
-    }
-    return null;
-}
-
-export function takeAll<T>(r: ResultSet<T>): Result<T>[] {
-    return [...r];
+export function exec<T>(p: Parser<T>, source: string, n: number = 1) {
+    return [...p(new Reader(source)).take(n)]
 }
 
 export const flatten = (p: Parser<string[]>): Parser<string> => {

@@ -1,5 +1,5 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { strWhile, eof, strIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, str, StR, map, once, Reader, strWhile1, repeat, repeat1, repeatSep, take1, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, isLetter, filter, dbg, type Parser } from "./langspec/index.js";
+import { strWhile, eof, strIf, flatten, isButNL, isNumeral, isSpace, isSpaceButNL, str, StR, map, once, Reader, strWhile1, repeat, repeat1, repeatSep, seqFlatten, seqDrop13, seqDrop2, repeatSepWithStr, isLetter, filter, dbg, type Parser, exec } from "./langspec/index.js";
 import { balanced, balancedElement, simpleString, word } from "./langspec/pl.js";
 import { alt, optional } from "./langspec/alt.js";
 import { seq } from "./langspec/seq.js";
@@ -369,6 +369,5 @@ const document = map(
 )
 
 export const parseDocument = (input: string): Document | undefined => {
-    const reader = new Reader(input);
-    return take1(document(reader))?.value
+    return exec(document, input)[0]?.value;
 }
