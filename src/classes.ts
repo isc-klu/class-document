@@ -266,7 +266,7 @@ export class Document {
     extends: null | Extends;
     keywords: null | Keywords;
     gapKeywordsBegin: string;
-    members: [string[], (string | Member)[]];
+    members: [string[], Member[]];
     gapAfterClass: string;
 
     constructor(
@@ -281,7 +281,7 @@ export class Document {
         ext: null | Extends,
         keywords: null | Keywords,
         gapKeywordsBegin: string,
-        members: [string[], (string | Member)[]],
+        members: [string[], Member[]],
         gapAfterClass: string
     ) {
         this.gapBeforeDeps = gapBeforeDeps;

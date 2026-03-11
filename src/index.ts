@@ -1,8 +1,8 @@
 import { Dependency, Description, Document, Extends, ForeignKeyLikeMember, Keywords, Member, MethodLikeMember, PropertyLikeMember, TriggerLikeMember, XDataLikeMember } from "./classes.js";
-import { altN, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
+import { altN as alt, anythingBalanced as anyBalanced, chars as readWhile, eof, firstN, flatten, isAlPhA, isButNL, isNumeral, isSpace, isSpaceButNL, literal, LiTeRaL, map, oneOff as once, optional, Reader, someChars as readWhile1, repeat, repeat1, repeatSep, seq, singleLineString, succ, take1, type Parser, drop2, drop13, seqFlatten, seqDrop13, seqDrop15 } from "./langspec.js";
 
 const rCommentStart = literal("/*");
-const rCommentContentUnit = altN(
+const rCommentContentUnit = alt(
     once(readWhile1((c) => c !== "*")),
     firstN(2, (s) => s != "*/"),
 )
@@ -10,18 +10,18 @@ const rCommentContent = flatten(repeat(rCommentContentUnit));
 const rCommentEnd = literal("*/");
 const rComment = flatten(seq(rCommentStart, rCommentContent, rCommentEnd));
 
-const lCommentHead = altN(
+const lCommentHead = alt(
     literal("//"),
     literal("#;")
 );
-const lCommentContent = altN(
+const lCommentContent = alt(
     eof(""),
     succ(""),
     flatten(seq(firstN(1, (c) => /[^\n\/]/.test(c)), readWhile(isButNL)))
 );
 const lComment = flatten(seq(lCommentHead, lCommentContent, literal("\n")))
 
-const spaceUnit = once(altN(
+const spaceUnit = once(alt(
     readWhile1(isSpace),
     lComment,
     rComment,
@@ -29,7 +29,7 @@ const spaceUnit = once(altN(
 const space = flatten(repeat(spaceUnit));
 const space1 = flatten(repeat1(spaceUnit));
 
-const dependencyKeyword = altN(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator"));
+const dependencyKeyword = alt(LiTeRaL("import"), LiTeRaL("include"), LiTeRaL("includegenerator"));
 const dependency = map(
     seq(dependencyKeyword, space1, readWhile1(isButNL)),
     (parts) => new Dependency(...parts)
@@ -45,7 +45,7 @@ const dComment = map(
 )
 
 const symbol = once(readWhile1((c) => isAlPhA(c) || isNumeral(c) || c === "%" || c === "." || c === "_"))
-const name = altN(
+const name = alt(
     symbol,
     singleLineString
 )
@@ -55,17 +55,15 @@ const nameList = seqDrop13(
     literal("("), drop2(repeatSep(nameWithPad, literal(","))), literal(")")
 )
 
-
 const clsType = anyBalanced
 
 const asType = seqFlatten(
     space, LiTeRaL("as"), space, clsType
 )
 
-
 const keywordValue = seqFlatten(space, literal("="), space, anyBalanced)
 const keyword =
-    altN(
+    alt(
         flatten(seq(name, optional(keywordValue, ""))),
         flatten(seq(LiTeRaL("Not"), space1, name))
     )
@@ -78,7 +76,7 @@ const annKeywords = map(
     (parts) => new Keywords(...parts)
 )
 
-const parameterAnnOutput = altN(
+const parameterAnnOutput = alt(
     seqFlatten(LiTeRaL("Output"), space1),
     seqFlatten(LiTeRaL("ByRef"), space1),
 )
@@ -92,13 +90,13 @@ const parameterWithPad = seq(space, parameter, space)
 const parameters = drop2(repeatSep(parameterWithPad, literal(",")));
 const parameterList = seqDrop13(literal('('), parameters, literal(')'))
 
-
-const classExtendsValue = altN(
+const ancestor = alt(
     name,
     nameList
 );
-const classExtends = map(
-    seq(space1, LiTeRaL("extends"), space1, classExtendsValue),
+
+const annExtends = map(
+    seq(space1, LiTeRaL("extends"), space1, ancestor),
     (parts) => new Extends(...parts)
 )
 
@@ -106,7 +104,7 @@ const mPropertyLike = map(
     seq(
         dComment,
         space,
-        altN(...[
+        alt(...[
             "parameter",
             "property",
             "projection",
@@ -146,7 +144,7 @@ const mXData = map(
         seq(
             dComment,
             space,
-            altN(
+            alt(
                 LiTeRaL("xdata"),
                 LiTeRaL("storage")
             ),
@@ -181,7 +179,7 @@ const mTrigger = map(
 const mMethodSignature = seq(
     dComment,
     space,
-    altN(
+    alt(
         LiTeRaL("trigger"),
         LiTeRaL("method"),
         LiTeRaL("classmethod"),
@@ -210,17 +208,15 @@ const mMethodLike = map(
     }
 )
 
-const member = altN<Member>(mPropertyLike, mForeignKey, mXData, mTrigger, mMethodLike)
+const member = alt<Member>(mPropertyLike, mForeignKey, mXData, mTrigger, mMethodLike)
 const members = repeatSep(space, member)
-
-const documentBlock: Parser<[string[], (string | Member)[]]> = map(
-    seq(
+const memberList: Parser<[string[], Member[]]> =
+    seqDrop13(
         literal("{"),
         members,
         literal("}"),
-    ),
-    ([_1, x, _2]) => x
-)
+    )
+
 const document = map(
     seq(
         // before the class keyword
@@ -236,11 +232,11 @@ const document = map(
             LiTeRaL("class"),
             space1,
             name,
-            optional(classExtends),
+            optional(annExtends),
             optional(annKeywords),
             space,
         ),
-        documentBlock,
+        memberList,
         space,
         eof(null)
     ),
