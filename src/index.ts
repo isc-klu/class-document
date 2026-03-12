@@ -6,7 +6,6 @@ import {
     Extends,
     MForeignKey,
     AnnKeywordList,
-    Member,
     MethodLikeMember,
     MParameter,
     Index,
