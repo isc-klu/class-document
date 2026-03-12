@@ -1,4 +1,3 @@
-import { alt } from './alt.js';
 import {
     repeat,
     strIf,
@@ -8,9 +7,10 @@ import {
     isSymbol,
     repeat1,
     isSpace,
+    alt,
+    seq,
 } from './index.js';
 import { once, type Parser, rec } from './core.js';
-import { seq } from './seq.js';
 
 export const doubleQuotedContent = once(
     repeat(

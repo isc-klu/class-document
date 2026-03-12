@@ -1,6 +1,8 @@
-import { alt, optional } from './alt.js';
+export * from './alt.js';
+export * from './seq.js';
 import { seq } from './seq.js';
 import { filter, strN, strWhile, succ, type Parser } from './core.js';
+import { alt, optional } from './alt.js';
 
 export function strIf(
     n: number,

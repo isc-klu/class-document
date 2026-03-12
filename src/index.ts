@@ -26,6 +26,9 @@ import {
     repeat1,
     repeatSep,
     repeatSepWithStr,
+    alt,
+    optional,
+    seq,
 } from './langspec/index.js';
 import { filter } from './langspec/core.js';
 import { strWhile, eof } from './langspec/core.js';
@@ -36,8 +39,6 @@ import {
     simpleString,
     word,
 } from './langspec/pl.js';
-import { alt, optional } from './langspec/alt.js';
-import { seq } from './langspec/seq.js';
 
 // Range Comment
 const rCommentStart = '/*';
