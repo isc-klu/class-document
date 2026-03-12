@@ -219,7 +219,7 @@ export const eof = <T>(value: T) =>
     withReader((reader) =>
         (reader.atEnd() ? [{ reader, value }] : []).values(),
     );
-export const strN = (n: number = 1) => withReader((reader) => reader.read(n));
+const strN = (n: number = 1) => withReader((reader) => reader.read(n));
 export const strWhile = (p: (x: string) => boolean = (_) => true) =>
     withReader((reader) => reader.readWhile(p));
 

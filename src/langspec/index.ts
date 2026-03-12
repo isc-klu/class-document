@@ -1,4 +1,3 @@
-export * from './alt.js';
 export * from './seq.js';
 export type ParserTuple<T extends any[]> = {
     [K in keyof T]: Parser<T[K]>;
@@ -19,10 +18,40 @@ export const toParser = <T extends AlmostParser>(
         : from;
 export const repeat = <T>(x: Parser<T>) => repeatWithAcc([], x);
 
+export function alt<T extends AlmostParser[]>(...ps: T) {
+    return ps.reduce<Parser<AlmostParserOutput<T[number]>>>(
+        (acc, p) => acc.alt2(toParser(p)),
+        fail,
+    );
+}
+
+export function optional<A, B = null>(p: Parser<A>, x?: B): Parser<A | B>;
+export function optional(p: Parser<any>, x: any = null): Parser<any> {
+    return p.alt2(succ(x));
+}
+
+export function seq<T extends AlmostParser[]>(
+    ...ps: T
+): Parser<{
+    [K in keyof T]: AlmostParserOutput<T[K]>;
+}> {
+    return ps.reduce(
+        (acc: Parser<any>, p) =>
+            acc.seq2(toParser(p)).map(([xs, x]) => [...xs, x]),
+        succ([] as any),
+    );
+}
+
 export * from './core.js';
-import { seq } from './seq.js';
-import { filter, repeatWithAcc, str, strWhile, type Parser } from './core.js';
-import { optional } from './alt.js';
+import {
+    fail,
+    filter,
+    repeatWithAcc,
+    str,
+    strWhile,
+    succ,
+    type Parser,
+} from './core.js';
 
 export function strWhile1(
     p: (x: string) => boolean = (_) => true,
