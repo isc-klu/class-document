@@ -104,6 +104,12 @@ export class Parser<A> {
     proceed(reader: Reader) {
         return this.f(reader);
     }
+    public describe(s: string): Parser<A> {
+        return this;
+    }
+    public markTrivial(): Parser<A> {
+        return this;
+    }
     public exec(source: string, n: number = 1) {
         return [...this.proceed(new Reader(source)).take(n)];
     }
@@ -227,11 +233,14 @@ export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
     return p.bind((x) => (f(x) ? succ(x) : fail));
 }
 
-export const repeat1 = <T>(x: Parser<T>) => repeat1WithAcc([], x);
-export const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
-    repeat1WithAcc(xs, x).alt2(succ(xs));
 export const repeat1WithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
     x.bind((xv) => repeatWithAcc([...xs, xv], x));
+export const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
+    repeat1WithAcc(xs, x).alt2(succ(xs));
+
+export const repeat = <T>(x: Parser<T>) => repeatWithAcc([], x);
+export const repeat1 = <T>(x: Parser<T>) => repeat1WithAcc([], x);
+
 export function strIf(
     n: number,
     p: (x: string) => boolean = (_) => true,

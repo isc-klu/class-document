@@ -2,11 +2,11 @@ export * from './core.js';
 import {
     fail,
     filter,
-    repeatWithAcc,
     str,
     strWhile,
     succ,
     type Parser,
+    repeat,
 } from './core.js';
 
 export type ParserTuple<T extends any[]> = {
@@ -26,7 +26,6 @@ export const toParser = <T extends AlmostParser>(
     typeof from === 'string'
         ? (str(from) as Parser<AlmostParserOutput<T>>)
         : from;
-export const repeat = <T>(x: Parser<T>) => repeatWithAcc([], x);
 
 export function alt<T extends AlmostParser[]>(...ps: T) {
     return ps.reduce<Parser<AlmostParserOutput<T[number]>>>(

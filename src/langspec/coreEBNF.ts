@@ -1,72 +1,30 @@
-type NStr = {
-    kind: 'str';
-    caseInsensitive?: boolean;
-    content: string;
-};
+import type { Node, NSeq, NAlt } from './EBNF.js';
 
-type NRef = {
-    kind: 'ref';
-    content: symbol;
-};
-
-type NAlt = {
-    kind: 'alt';
-    content: Node[];
-};
-
-type NSeq = {
-    kind: 'seq';
-    content: Node[];
-};
-
-type NPat = {
-    kind: 'pat';
-    content: string;
-};
-
-type NRep = {
-    kind: 'rep';
-    content: Node;
-};
-
-type NRep1 = {
-    kind: 'rep1';
-    content: Node;
-};
-
-type NodeAnnotation = {
-    annotations?: string[];
-};
-
-// Encode EOF with undefined
-
-type Node = (NStr | NRef | NAlt | NSeq | NPat | NRep | NRep1) & NodeAnnotation;
-
-function makeSeq(n1: Node, n2: Node): NSeq {
+function makeSeq(n1: Node, n2: Node): Node {
+    const content = [
+        ...(typeof n1 === 'object' && n1.kind === 'seq' ? n1.content : [n1]),
+        ...(typeof n2 === 'object' && n2.kind === 'seq' ? n2.content : [n2]),
+    ];
+    if (content.length === 1) {
+        return content[0]!;
+    }
     return {
         kind: 'seq',
-        content: [
-            ...(typeof n1 === 'object' && n1.kind === 'seq'
-                ? n1.content
-                : [n1]),
-            ...(typeof n2 === 'object' && n2.kind === 'seq'
-                ? n2.content
-                : [n2]),
-        ],
+        content,
     };
 }
 
-function makeAlt(n1: Node, n2: Node): NAlt {
+function makeAlt(n1: Node, n2: Node): Node {
+    const content = [
+        ...(typeof n1 === 'object' && n1.kind === 'alt' ? n1.content : [n1]),
+        ...(typeof n2 === 'object' && n2.kind === 'alt' ? n2.content : [n2]),
+    ];
+    if (content.length === 1) {
+        return content[0]!;
+    }
     return {
         kind: 'alt',
-        content: [
-            ...(typeof n1 === 'object' && n1.kind === 'alt'
-                ? n1.content
-                : [n1]),
-            ...(typeof n2 === 'object' && n2.kind === 'alt'
-                ? n2.content
-                : [n2]),
-        ],
+        content,
     };
 }
 
@@ -101,17 +59,54 @@ export const compose = <T extends any[]>(
 
 export class Parser<A> {
     id: symbol;
-    constructor(public toNode: (shared: Map<symbol, Node>) => Node) {
+    description?: string;
+    private trivial: boolean;
+    constructor(public toNode: (shared: Map<string, Node>) => Node) {
         this.id = Symbol('node');
+        this.trivial = false;
+        const that = this;
+        this.toNode = (shared) => {
+            if (that.trivial) {
+                return { kind: 'seq', content: [] };
+            }
+            if (that.description != undefined) {
+                if (!shared.has(that.description)) {
+                    shared.set(that.description, toNode(shared));
+                }
+                return {
+                    kind: 'ref',
+                    content: Symbol(that.description),
+                };
+            }
+            return toNode(shared);
+        };
+    }
+    public describe(s: string): Parser<A> {
+        this.description = s;
+        return this;
+    }
+    public markTrivial(): Parser<A> {
+        this.trivial = true;
+        return this;
     }
     public exec(source: string, n: number = 1) {
         throw new Error('This is a printer!');
     }
     public alt2<B>(p2: Parser<B>): Parser<A | B> {
         const p1 = this;
-        return new Parser((shared) =>
-            makeAlt(p1.toNode(shared), p2.toNode(shared)),
-        );
+        return new Parser((shared) => {
+            try {
+                const n1 = p1.toNode(shared);
+                try {
+                    const n2 = p2.toNode(shared);
+                    return makeAlt(n1, n2);
+                } catch {
+                    return n1;
+                }
+            } catch {
+                return p2.toNode(shared);
+            }
+        });
     }
     public seq2<B>(p2: Parser<B>): Parser<[A, B]> {
         const p1 = this;
@@ -120,7 +115,7 @@ export class Parser<A> {
         );
     }
     public map<Y>(_: (x: A) => Y): Parser<Y> {
-        return new Parser(this.toNode);
+        return this as Parser<any>;
     }
     public intoStr(
         sep: string = '',
@@ -194,24 +189,31 @@ export class Parser<A> {
     }
 }
 
-export const rec = <T>(lazyP: () => Parser<T>): Parser<T> =>
-    new Parser((shared): Node => {
+export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
+    let firstTime = true;
+    return new Parser((shared): Node => {
         const p = lazyP();
-        if (!shared.has(p.id)) {
-            shared.set(p.id, { kind: 'str', content: '' });
-            shared.set(p.id, p.toNode(shared));
+        if (firstTime) {
+            firstTime = false;
+            shared.set(p.id.toString(), p.toNode(shared));
         }
-        return shared.get(p.id)!;
+        return {
+            kind: 'ref',
+            content: p.id,
+        };
     });
+};
 
 export const once = <T>(p: Parser<T>): Parser<T> => p;
-export const succ = <T>(value: T) =>
+export const succ = <T>(_?: any): Parser<T> =>
     new Parser((shared) => ({ kind: 'seq', content: [] }));
 export const fail: Parser<never> = new Parser((shared) => {
     throw Error('Deadend!');
 });
-export const eof = <T>(value: T) => succ([]);
-export const strWhile = (p: (x: string) => boolean = (_) => true) =>
+export const eof = <T>(value: T): Parser<T> => succ();
+export const strWhile = (
+    p: (x: string) => boolean = (_) => true,
+): Parser<string> =>
     new Parser((shared) => ({
         kind: 'pat',
         content: '.* and ' + p.toString(),
@@ -236,9 +238,15 @@ export function strIf(
     }));
 }
 
-export const repeat1 = <T>(x: Parser<T>) =>
+export const repeat1 = <T>(x: Parser<T>): Parser<T[]> =>
     new Parser((shared) => ({
         kind: 'rep1',
+        content: x.toNode(shared),
+    }));
+
+export const repeat = <T>(x: Parser<T>): Parser<T[]> =>
+    new Parser((shared) => ({
+        kind: 'rep',
         content: x.toNode(shared),
     }));
 

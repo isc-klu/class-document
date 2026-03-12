@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import { document } from '../src/index.js';
 import assert from 'assert';
 import type { Document } from '../src/classes.js';
+import { displayNode } from '../src/langspec/EBNF.js';
+import type { Node } from '../src/langspec/Node.js';
 
 class Section {
     title: string;
@@ -169,35 +171,44 @@ const semanticErrors = [
     'Invalid — unknown property keyword',
 ];
 
+// const shared = new Map<string, Node>();
+// const node = document.toNode(shared);
+// console.log(JSON.stringify(node, null, 2));
+// const root = displayNode(node);
+// for (const [k, v] of shared.entries()) {
+//     console.log(`<${k}> ::= ` + displayNode(v));
+// }
+// console.log(root);
+
 const parseDocument = (input: string): Document | undefined => {
     return document.exec(input)[0]?.value;
 };
 
-// for (const file of fs.readdirSync(`./test/resource`)) {
-//     const fileString = fs.readFileSync(`./test/resource/${file}`);
-//     const suite = new Suite(fileString.toString());
-//     for (const sec of suite.content) {
-//         // if (sec.title != 'Valid Index: collection properties (KEYS/ELEMENTS)') {
-//         //     continue;
-//         // }
-//         if (semanticErrors.includes(sec.title)) {
-//             continue;
-//         }
-//         // if (sec.error) {
-//         //     continue
-//         // }
-//         const doc = parseDocument(sec.objectscript);
-//         console.assert(
-//             sec.error === (doc === undefined),
-//             'Should ' + (sec.error ? 'fail' : 'succeed') + ' ' + sec.title,
-//         );
-//         if (doc !== undefined) {
-//             const roundtrip = doc.toString();
-//             assert.deepStrictEqual(
-//                 roundtrip.split('\n'),
-//                 sec.objectscript.split('\n'),
-//                 `FAILED: ${sec.title} - Source is not preserved`,
-//             );
-//         }
-//     }
-// }
+for (const file of fs.readdirSync(`./test/resource`)) {
+    const fileString = fs.readFileSync(`./test/resource/${file}`);
+    const suite = new Suite(fileString.toString());
+    for (const sec of suite.content) {
+        // if (sec.title != 'Valid Index: collection properties (KEYS/ELEMENTS)') {
+        //     continue;
+        // }
+        if (semanticErrors.includes(sec.title)) {
+            continue;
+        }
+        // if (sec.error) {
+        //     continue
+        // }
+        const doc = parseDocument(sec.objectscript);
+        console.assert(
+            sec.error === (doc === undefined),
+            'Should ' + (sec.error ? 'fail' : 'succeed') + ' ' + sec.title,
+        );
+        if (doc !== undefined) {
+            const roundtrip = doc.toString();
+            assert.deepStrictEqual(
+                roundtrip.split('\n'),
+                sec.objectscript.split('\n'),
+                `FAILED: ${sec.title} - Source is not preserved`,
+            );
+        }
+    }
+}

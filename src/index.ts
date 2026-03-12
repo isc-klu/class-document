@@ -49,7 +49,9 @@ const rCommentContentElem = alt(
 );
 const rCommentContent = repeat(rCommentContentElem).intoStr();
 const rCommentEnd = '*/';
-const rComment = seq(rCommentStart, rCommentContent, rCommentEnd).intoStr();
+const rComment = seq(rCommentStart, rCommentContent, rCommentEnd)
+    .intoStr()
+    .describe('RangeComment');
 
 // Line Comment
 const lCommentHead = alt('//', '#;');
@@ -65,8 +67,8 @@ const lComment = seq(lCommentHead, lCommentContent, '\n').intoStr();
 
 // Gap Between "Meaningful" Elements
 const gapElem = once(alt(strWhile1(isSpace), lComment, rComment));
-const gap = repeat(gapElem).intoStr();
-const gap1 = repeat1(gapElem).intoStr();
+const gap = repeat(gapElem).intoStr().markTrivial();
+const gap1 = repeat1(gapElem).intoStr().markTrivial();
 
 // Document Dependencies (i.e., import, include, and includegenerator clauses)
 const dependencyKeyword = alt(
@@ -74,24 +76,23 @@ const dependencyKeyword = alt(
     StR('include'),
     StR('includegenerator'),
 );
-const dependency = seq(dependencyKeyword, gap1, strWhile1(isNotNL)).map(
-    (parts) => new Dependency(...parts),
-);
+const dependency = seq(dependencyKeyword, gap1, strWhile1(isNotNL))
+    .map((parts) => new Dependency(...parts))
+    .describe('Import/Include/IncludeGenerator');
 const dependencies = repeat(dependency);
 
+const gapInline = strWhile(isSpaceButNL).markTrivial();
+
 // Document Comments (only allowed before the class and class members)
-const dCommentLine = seq(
-    strWhile(isSpaceButNL),
-    '///',
-    strWhile(isNotNL),
-    '\n',
-).intoStr();
-const dComment = repeat(dCommentLine).map((parts) => new Description(parts));
+const dCommentLine = seq(gapInline, '///', strWhile(isNotNL), '\n').intoStr();
+const dComment = repeat(dCommentLine)
+    .map((parts) => new Description(parts))
+    .describe('Description');
 
 const name = alt(
     word((c) => isNumeral(c) || ['%', '.'].includes(c)),
     simpleString,
-);
+).describe('Identifier');
 
 function commaSeperatedListOf<X>(
     name: Parser<X>,
@@ -103,9 +104,9 @@ function commaSeperatedListOf<X>(
 const nameWithPad = seq(gap, name, gap);
 const nameList = seq('(', repeatSepWithStr(nameWithPad, ','), ')').takeM();
 
-const value = once(
-    repeat1(alt(balancedElement(), '/', '_', '-', '.', '%')),
-).intoStr();
+const value = once(repeat1(alt(balancedElement(), '/', '_', '-', '.', '%')))
+    .intoStr()
+    .describe('Value');
 
 const typeParamWithPad = seq(gap, value, gap, '=', gap, value, gap).intoStr();
 const typeParamList = seq(
@@ -118,7 +119,7 @@ const clsType = seq(
     optional(seq(gap, typeParamList).intoStr(), ''),
 ).intoStr();
 
-const annType = seq(gap, StR('as'), gap, clsType).intoStr();
+const annType = seq(gap, StR('As'), gap, clsType).intoStr();
 
 const assignedKeyword = <Name extends string, Values extends string[]>(
     name: Name,
@@ -141,9 +142,6 @@ const genericAssignedKeyword = <Name extends string>(name: Name) =>
 
 const negatableKeyword = <Name extends string>(name: Name) =>
     seq(optional(seq(StR('Not'), gap1).intoStr(), ''), StR(name)).intoStr();
-
-const genericKeyword = <Name extends string>(name: Name) =>
-    alt(negatableKeyword(name), genericAssignedKeyword(name));
 
 const annKeywords = (keywordName: Parser<string>) => {
     const keywordValueAnn = seq(gap, '=', gap, value).intoStr();
@@ -192,7 +190,7 @@ const annKeywordsForClass = annKeywords(
         StR('StorageStrategy'),
         StR('System'),
         StR('ViewQuery'),
-    ),
+    ).describe('ClassKeywords'),
 );
 
 const annKeywordsForMethodLike = annKeywords(
@@ -225,9 +223,10 @@ const annKeywordsForMethodLike = annKeywords(
         StR('SqlName'),
         StR('SqlProc'),
         StR('WebMethod'),
-    ),
+    ).describe('MethodKeywords'),
 );
-const annMemberKeywordList = annKeywords(name);
+const genericKeywordList = annKeywords(name).describe('GenericKeywordList');
+const annMemberKeywordList = genericKeywordList;
 
 const annArgMode = seq(alt(StR('Output'), StR('ByRef')), gap1).intoStr();
 const annArgDefault = seq(gap, '=', gap, value).intoStr();
@@ -251,12 +250,12 @@ const annValue = seq(seq(gap, '=', gap).intoStr(), value).map(
     (parts) => new AnnValue(...parts),
 );
 
-const mParameter = seq(
+const parameter = seq(
     StR('Parameter'),
     gap1,
     name,
     optional(annType),
-    optional(annKeywords(name)),
+    optional(genericKeywordList),
     optional(annValue),
     gap,
     ';',
@@ -264,7 +263,8 @@ const mParameter = seq(
     .dropL()
     .map((parts) => {
         return new MParameter(...parts);
-    });
+    })
+    .describe('Parameter');
 
 const propertyCollection = seq(
     gap1,
@@ -275,7 +275,7 @@ const propertyCollection = seq(
 
 const asPropertyType = seq(
     gap,
-    StR('as'),
+    StR('As'),
     optional(propertyCollection, ''),
     gap1,
     clsType,
@@ -290,14 +290,15 @@ const mPropertyOrProjection = seq(
     gap1,
     name,
     optional(asPropertyType),
-    optional(annKeywords(name)),
+    optional(genericKeywordList),
     gap,
     ';',
 )
     .dropL()
     .map((parts) => {
         return new MPropertyOrProjection(...parts);
-    });
+    })
+    .describe('Property/Relationship/Projection');
 
 const collationType = alt(
     'EXACT',
@@ -306,7 +307,7 @@ const collationType = alt(
     'TRUNCATE',
     'PLUS',
     'MINUS',
-);
+).describe('CollationType');
 
 const indexPropertyExpression = seq(
     name,
@@ -344,7 +345,8 @@ const index = seq(
     .dropL()
     .map((parts) => {
         return new Index(...parts);
-    });
+    })
+    .describe('Index');
 
 const mForeignKey = seq(
     StR('foreignkey'),
@@ -360,7 +362,8 @@ const mForeignKey = seq(
     .dropL()
     .map((parts) => {
         return new MForeignKey(...parts);
-    });
+    })
+    .describe('ForeignKey');
 
 const mXData = seq(
     alt(StR('xdata'), StR('storage')),
@@ -369,11 +372,13 @@ const mXData = seq(
     optional(annMemberKeywordList, null),
     gap,
     seq('{', balanced, '}').takeM(),
-).map((parts) => {
-    return new MXDataOrStorage(...parts);
-});
+)
+    .map((parts) => {
+        return new MXDataOrStorage(...parts);
+    })
+    .describe('XData/Storage');
 
-const triggerKeywords = [
+const triggerKeywords = alt(
     assignedKeyword('CodeMode', ['code', 'objectgenerator']),
     assignedKeyword('Event', [
         'DELETE',
@@ -394,9 +399,9 @@ const triggerKeywords = [
     genericAssignedKeyword('SqlName'),
     assignedKeyword('Time', ['AFTER', 'BEFORE']),
     genericAssignedKeyword('UpdateColumnList'),
-];
+).describe('TriggerKeywords');
 
-const triggerKeywordList = annKeywords(alt(...triggerKeywords));
+const triggerKeywordList = annKeywords(triggerKeywords);
 
 const trigger = seq(
     StR('trigger').named('keyword'),
@@ -407,13 +412,12 @@ const trigger = seq(
     seq('{', balanced, '}').takeM().named('implementation'),
 )
     .intoObj()
-    .map((parts) => new Trigger(parts));
+    .map((parts) => new Trigger(parts))
+    .describe('Trigger');
 
 const methodBody = seq('{', balanced, '}').takeM();
 const mMethodLike = seq(
-    alt(StR('trigger'), StR('method'), StR('classmethod'), StR('query')).named(
-        'keyword',
-    ),
+    alt(StR('method'), StR('classmethod'), StR('query')).named('keyword'),
     gap1.named('gapKeywordName'),
     name.named('name'),
     gap.named('gapNameParen'),
@@ -426,17 +430,18 @@ const mMethodLike = seq(
     .intoObj()
     .map((parts) => {
         return new MethodLikeMember(parts);
-    });
+    })
+    .describe('Method/ClassMethod/Query');
 
 const member = alt(
-    mParameter,
+    parameter,
     mPropertyOrProjection,
     index,
     mForeignKey,
     mXData,
     trigger,
     mMethodLike,
-);
+).describe('Member');
 const memberWithComment = seq(dComment, gap, member).map(
     ([description, gapDescriptionKeyword, member]) => {
         member.setDescription(description, gapDescriptionKeyword);
