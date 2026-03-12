@@ -70,7 +70,6 @@ Below is a summary of common combinators used in the grammar:
 * repeatSepWithStr(x, s) — zero or more occurrences of x separated by string s
 * seq(x ...) — sequence of elements x ...
 * seqJoin(x ...) — sequence of elements x ..., each producing a string; results are concatenated
-* seqDrop2(x, y) — sequence of x then y; result drops y
 * seqDrop13(s, x, t) — sequence of literal s, then x, then literal t; result drops s and t
 
 ## Next Step

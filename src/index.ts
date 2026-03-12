@@ -26,7 +26,6 @@ import {
     repeat,
     repeat1,
     repeatSep,
-    seqDrop2,
     repeatSepWithStr,
 } from './langspec/index.js';
 import { filter } from './langspec/core.js';
@@ -120,15 +119,7 @@ const value = once(
     ),
 ).intoStr();
 
-const typeParamWithPad = seq(
-    gap,
-    value,
-    gap,
-    str('='),
-    gap,
-    value,
-    gap,
-).intoStr();
+const typeParamWithPad = seq(gap, value, gap, '=', gap, value, gap).intoStr();
 const typeParamList = seq(
     str('('),
     repeatSepWithStr(typeParamWithPad, ',').map((xs) => xs.join(',')),
@@ -144,25 +135,18 @@ const annType = seq(gap, StR('as'), gap, clsType).intoStr();
 const assignedKeyword = <Name extends string, Values extends string[]>(
     name: Name,
     values: Values,
-) =>
-    seq(
-        StR(name),
-        gap,
-        str('='),
-        gap,
-        alt(...values.map((v) => StR(v))),
-    ).intoStr();
+) => seq(StR(name), gap, '=', gap, alt(...values.map((v) => StR(v)))).intoStr();
 
 const assignedKeywordP = <Name extends string>(
     name: Name,
     value: Parser<string>,
-) => seq(StR(name), gap, str('='), gap, value).intoStr();
+) => seq(StR(name), gap, '=', gap, value).intoStr();
 
 const genericAssignedKeyword = <Name extends string>(name: Name) =>
     seq(
         StR(name),
         gap,
-        str('='),
+        '=',
         gap,
         balancedElement((c) => /[_]/.test(c)),
     ).intoStr();
@@ -174,7 +158,7 @@ const genericKeyword = <Name extends string>(name: Name) =>
     alt(negatableKeyword(name), genericAssignedKeyword(name));
 
 const annKeywords = (keywordName: Parser<string>) => {
-    const keywordValueAnn = seq(gap, str('='), gap, value).intoStr();
+    const keywordValueAnn = seq(gap, '=', gap, value).intoStr();
     const keywordClause = alt(
         seq(keywordName, optional(keywordValueAnn, '')).intoStr(),
         seq(StR('Not'), gap1, keywordName).intoStr(),
@@ -258,7 +242,7 @@ const annKeywordsForMethodLike = annKeywords(
 const annMemberKeywordList = annKeywords(name);
 
 const annArgMode = seq(alt(StR('Output'), StR('ByRef')), gap1).intoStr();
-const annArgDefault = seq(gap, str('='), gap, value).intoStr();
+const annArgDefault = seq(gap, '=', gap, value).intoStr();
 const arg = seq(
     optional(annArgMode),
     name,
@@ -275,24 +259,24 @@ const annExtends = seq(gap1, StR('extends'), gap1, ancestor).map(
     (parts) => new Extends(...parts),
 );
 
-const annValue = seq(seq(gap, str('='), gap).intoStr(), value).map(
+const annValue = seq(seq(gap, '=', gap).intoStr(), value).map(
     (parts) => new AnnValue(...parts),
 );
 
-const mParameter = seqDrop2(
-    seq(
-        StR('Parameter'),
-        gap1,
-        name,
-        optional(annType),
-        optional(annKeywords(name)),
-        optional(annValue),
-        gap,
-    ),
+const mParameter = seq(
+    StR('Parameter'),
+    gap1,
+    name,
+    optional(annType),
+    optional(annKeywords(name)),
+    optional(annValue),
+    gap,
     str(';'),
-).map((parts) => {
-    return new MParameter(...parts);
-});
+)
+    .dropL()
+    .map((parts) => {
+        return new MParameter(...parts);
+    });
 
 const propertyCollection = seq(
     gap1,
@@ -309,23 +293,23 @@ const asPropertyType = seq(
     clsType,
 ).intoStr();
 
-const mPropertyOrProjection = seqDrop2(
-    seq(
-        alt(
-            StR('Property'),
-            StR('Relationship'), // relationship is a kind of property
-            StR('Projection'),
-        ),
-        gap1,
-        name,
-        optional(asPropertyType),
-        optional(annKeywords(name)),
-        gap,
+const mPropertyOrProjection = seq(
+    alt(
+        StR('Property'),
+        StR('Relationship'), // relationship is a kind of property
+        StR('Projection'),
     ),
-    str(';'),
-).map((parts) => {
-    return new MPropertyOrProjection(...parts);
-});
+    gap1,
+    name,
+    optional(asPropertyType),
+    optional(annKeywords(name)),
+    gap,
+    ';',
+)
+    .dropL()
+    .map((parts) => {
+        return new MPropertyOrProjection(...parts);
+    });
 
 const collationType = alt(
     str('EXACT'),
@@ -377,21 +361,21 @@ const index = seq(
         return new Index(...parts);
     });
 
-const mForeignKey = seqDrop2(
-    seq(
-        StR('foreignkey'),
-        gap1,
-        name,
-        filter(nameList, (ns) => ns.length > 0),
-        seq(gap1, StR('References'), gap1).intoStr(),
-        name,
-        optional(seq(gap, seq('(', name, ')').takeM()).intoStr()),
-        annMemberKeywordList,
-    ),
+const mForeignKey = seq(
+    StR('foreignkey'),
+    gap1,
+    name,
+    filter(nameList, (ns) => ns.length > 0),
+    seq(gap1, StR('References'), gap1).intoStr(),
+    name,
+    optional(seq(gap, seq('(', name, ')').takeM()).intoStr()),
+    annMemberKeywordList,
     str(';'),
-).map((parts) => {
-    return new MForeignKey(...parts);
-});
+)
+    .dropL()
+    .map((parts) => {
+        return new MForeignKey(...parts);
+    });
 
 const mXData = seq(
     alt(StR('xdata'), StR('storage')),
@@ -476,26 +460,26 @@ const memberWithComment = seq(dComment, gap, member).map(
 );
 const members = repeatSep(gap, memberWithComment);
 const memberList = seq('{', members, '}').takeM();
-const document = seqDrop2(
-    seq(
-        gap,
-        dependencies,
-        gap,
-        dComment,
-        gap,
-        StR('class'),
-        gap1,
-        name,
-        optional(annExtends),
-        optional(annKeywordsForClass),
-        gap,
-        memberList,
-        gap,
-    ),
+const document = seq(
+    gap,
+    dependencies,
+    gap,
+    dComment,
+    gap,
+    StR('class'),
+    gap1,
+    name,
+    optional(annExtends),
+    optional(annKeywordsForClass),
+    gap,
+    memberList,
+    gap,
     eof(null),
-).map((parts) => {
-    return new Document(...parts);
-});
+)
+    .dropL()
+    .map((parts) => {
+        return new Document(...parts);
+    });
 
 export const parseDocument = (input: string): Document | undefined => {
     return document.exec(input)[0]?.value;
