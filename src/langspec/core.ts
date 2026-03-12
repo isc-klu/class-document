@@ -143,7 +143,7 @@ export class Parser<A> {
     public named<K extends PropertyKey>(k: K): Parser<{ [P in K]: A }> {
         return this.map((v) => ({ [k]: v }) as Record<K, A>);
     }
-    public ignored<K extends PropertyKey>(): Parser<{}> {
+    public ignored(): Parser<{}> {
         return this.map((v) => ({}));
     }
     public intoObj(): Parser<A extends any[] ? Intersection<A> : never> {
