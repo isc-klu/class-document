@@ -1,4 +1,14 @@
-export * from './seq.js';
+export * from './core.js';
+import {
+    fail,
+    filter,
+    repeatWithAcc,
+    str,
+    strWhile,
+    succ,
+    type Parser,
+} from './core.js';
+
 export type ParserTuple<T extends any[]> = {
     [K in keyof T]: Parser<T[K]>;
 };
@@ -41,17 +51,6 @@ export function seq<T extends AlmostParser[]>(
         succ([] as any),
     );
 }
-
-export * from './core.js';
-import {
-    fail,
-    filter,
-    repeatWithAcc,
-    str,
-    strWhile,
-    succ,
-    type Parser,
-} from './core.js';
 
 export function strWhile1(
     p: (x: string) => boolean = (_) => true,

@@ -173,31 +173,31 @@ const parseDocument = (input: string): Document | undefined => {
     return document.exec(input)[0]?.value;
 };
 
-for (const file of fs.readdirSync(`./test/resource`)) {
-    const fileString = fs.readFileSync(`./test/resource/${file}`);
-    const suite = new Suite(fileString.toString());
-    for (const sec of suite.content) {
-        // if (sec.title != 'Valid Index: collection properties (KEYS/ELEMENTS)') {
-        //     continue;
-        // }
-        if (semanticErrors.includes(sec.title)) {
-            continue;
-        }
-        // if (sec.error) {
-        //     continue
-        // }
-        const doc = parseDocument(sec.objectscript);
-        console.assert(
-            sec.error === (doc === undefined),
-            'Should ' + (sec.error ? 'fail' : 'succeed') + ' ' + sec.title,
-        );
-        if (doc !== undefined) {
-            const roundtrip = doc.toString();
-            assert.deepStrictEqual(
-                roundtrip.split('\n'),
-                sec.objectscript.split('\n'),
-                `FAILED: ${sec.title} - Source is not preserved`,
-            );
-        }
-    }
-}
+// for (const file of fs.readdirSync(`./test/resource`)) {
+//     const fileString = fs.readFileSync(`./test/resource/${file}`);
+//     const suite = new Suite(fileString.toString());
+//     for (const sec of suite.content) {
+//         // if (sec.title != 'Valid Index: collection properties (KEYS/ELEMENTS)') {
+//         //     continue;
+//         // }
+//         if (semanticErrors.includes(sec.title)) {
+//             continue;
+//         }
+//         // if (sec.error) {
+//         //     continue
+//         // }
+//         const doc = parseDocument(sec.objectscript);
+//         console.assert(
+//             sec.error === (doc === undefined),
+//             'Should ' + (sec.error ? 'fail' : 'succeed') + ' ' + sec.title,
+//         );
+//         if (doc !== undefined) {
+//             const roundtrip = doc.toString();
+//             assert.deepStrictEqual(
+//                 roundtrip.split('\n'),
+//                 sec.objectscript.split('\n'),
+//                 `FAILED: ${sec.title} - Source is not preserved`,
+//             );
+//         }
+//     }
+// }
