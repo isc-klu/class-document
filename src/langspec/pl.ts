@@ -7,10 +7,7 @@ import {
     alt,
     seq,
 } from './index.js';
-import { strIf } from './core.js';
-import { repeat1 } from './core.js';
-import { repeat } from './index.js';
-import { once, type Parser, rec } from './core.js';
+import { once, type Parser, rec, repeat1, strIf, repeat } from './index.js';
 
 export const doubleQuotedContent = once(
     repeat(

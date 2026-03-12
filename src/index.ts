@@ -24,13 +24,16 @@ import {
     alt,
     optional,
     seq,
+    strIf,
+    StR,
+    repeat1,
+    filter,
+    strWhile,
+    eof,
+    once,
+    type Parser,
 } from './langspec/index.js';
-import { strIf, StR } from './langspec/core.js';
-import { repeat1 } from './langspec/core.js';
 import { repeat } from './langspec/index.js';
-import { filter } from './langspec/core.js';
-import { strWhile, eof } from './langspec/core.js';
-import { once, type Parser } from './langspec/core.js';
 import {
     balanced,
     balancedElement,
