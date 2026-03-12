@@ -10,7 +10,7 @@ import {
     MethodLikeMember,
     MParameter,
     MIndex,
-    MTrigger,
+    Trigger,
     MXDataOrStorage,
     MPropertyOrProjection,
 } from './classes.js';
@@ -315,14 +315,16 @@ const mXData = seq(
     return new MXDataOrStorage(...parts);
 });
 
-const mTrigger = seq(
-    StR('trigger'),
-    gap1,
-    name,
-    optional(annKeywordForMember),
-    gap,
-    seqDrop13('{', balanced, '}'),
-).map((parts) => new MTrigger(...parts));
+const trigger = seq(
+    StR('trigger').named('keyword'),
+    gap1.named('gapKeywordName'),
+    name.named('name'),
+    optional(annKeywordForMember).named('keywordList'),
+    gap.named('gapNameEnd'),
+    seq(str('{'), balanced, str('}')).takeM().named('implementation'),
+)
+    .intoObj()
+    .map((parts) => new Trigger(parts));
 
 const methodBody = seq(str('{'), balanced, str('}')).takeM();
 const mMethodLike = seq(
@@ -349,7 +351,7 @@ const member = alt<Member>(
     mIndex,
     mForeignKey,
     mXData,
-    mTrigger,
+    trigger,
     mMethodLike,
 );
 const memberWithComment = seq(dComment, gap, member).map(

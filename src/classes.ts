@@ -248,20 +248,20 @@ export class MXDataOrStorage extends Member {
     }
 }
 
-export class MTrigger extends Member {
-    keywords: null | AnnKeywordList;
-    content: string;
-    constructor(
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        keywords: null | AnnKeywordList,
-        gapNameEnd: string,
-        content: string,
-    ) {
+export class Trigger extends Member {
+    keywordList: null | AnnKeywordList;
+    implementation: string;
+    constructor({
+        keyword,
+        gapKeywordName,
+        name,
+        keywordList,
+        gapNameEnd,
+        implementation,
+    }: any) {
         super(keyword, gapKeywordName, name, gapNameEnd);
-        this.keywords = keywords;
-        this.content = content;
+        this.keywordList = keywordList;
+        this.implementation = implementation;
     }
 
     toString(): string {
@@ -269,10 +269,10 @@ export class MTrigger extends Member {
             this.keyword +
                 this.gapKeywordName +
                 this.name +
-                (this.keywords === null ? '' : this.keywords.toString()) +
+                (this.keywordList === null ? '' : this.keywordList.toString()) +
                 this.gapNameEnd +
                 '{' +
-                this.content +
+                this.implementation +
                 '}',
         );
     }
