@@ -203,7 +203,7 @@ const annKeywordsForMethodLike = annKeywords(
         StR('WebMethod'),
     ),
 );
-const annKeywordForMember = annKeywords(name);
+const annMemberKeywordList = annKeywords(name);
 
 const annArgMode = alt(seqStr(StR('Output'), gap1), seqStr(StR('ByRef'), gap1));
 const annArgDefault = seqStr(gap, str('='), gap, value);
@@ -297,7 +297,7 @@ const mForeignKey = seqDrop2(
         seqStr(gap1, StR('References'), gap1),
         name,
         optional(seqStr(gap, seqDrop13('(', name, ')'))),
-        annKeywordForMember,
+        annMemberKeywordList,
     ),
     str(';'),
 ).map((parts) => {
@@ -308,18 +308,35 @@ const mXData = seq(
     alt(StR('xdata'), StR('storage')),
     gap1,
     name,
-    optional(annKeywordForMember, null),
+    optional(annMemberKeywordList, null),
     gap,
     seqDrop13('{', balanced, '}'),
 ).map((parts) => {
     return new MXDataOrStorage(...parts);
 });
 
+const triggerKeywords = [
+    'CodeMode',
+    'Event',
+    'Final',
+    'Foreach',
+    'Internal',
+    'Language',
+    'NewTable',
+    'OldTable',
+    'Order',
+    'SqlName',
+    'Time',
+    'UpdateColumnList',
+];
+
+const triggerKeywordList = annKeywords(alt(...triggerKeywords.map(StR)));
+
 const trigger = seq(
     StR('trigger').named('keyword'),
     gap1.named('gapKeywordName'),
     name.named('name'),
-    optional(annKeywordForMember).named('keywordList'),
+    optional(triggerKeywordList).named('keywordList'),
     gap.named('gapNameEnd'),
     seq(str('{'), balanced, str('}')).takeM().named('implementation'),
 )
