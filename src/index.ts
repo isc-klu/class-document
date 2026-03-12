@@ -20,7 +20,6 @@ import {
     isNumeral,
     isSpace,
     isSpaceButNL,
-    str,
     StR,
     strWhile1,
     repeat,
@@ -41,26 +40,26 @@ import { alt, optional } from './langspec/alt.js';
 import { seq } from './langspec/seq.js';
 
 // Range Comment
-const rCommentStart = str('/*');
+const rCommentStart = '/*';
 const rCommentContentElem = alt(
     once(strWhile1((c) => c !== '*')),
     strIf(2, (s) => s != '*/'),
 );
 const rCommentContent = repeat(rCommentContentElem).intoStr();
-const rCommentEnd = str('*/');
+const rCommentEnd = '*/';
 const rComment = seq(rCommentStart, rCommentContent, rCommentEnd).intoStr();
 
 // Line Comment
-const lCommentHead = alt(str('//'), str('#;'));
+const lCommentHead = alt('//', '#;');
 const lCommentContent = alt(
     seq(
         strIf(1, (c) => /[^\n\/]/.test(c)),
         strWhile(isButNL),
     ).intoStr(),
-    str(''),
+    '',
     eof(''),
 );
-const lComment = seq(lCommentHead, lCommentContent, str('\n')).intoStr();
+const lComment = seq(lCommentHead, lCommentContent, '\n').intoStr();
 
 // Gap Between "Meaningful" Elements
 const gapElem = once(alt(strWhile1(isSpace), lComment, rComment));
@@ -81,9 +80,9 @@ const dependencies = repeat(dependency);
 // Document Comments (only allowed before the class and class members)
 const dCommentLine = seq(
     strWhile(isSpaceButNL),
-    str('///'),
+    '///',
     strWhile(isButNL),
-    str('\n'),
+    '\n',
 ).intoStr();
 const dComment = repeat(dCommentLine).map((parts) => new Description(parts));
 
@@ -96,34 +95,21 @@ function commaSeperatedListOf<X>(
     name: Parser<X>,
 ): Parser<string | [string, X, string][]> {
     const nameWithPad = seq(gap, name, gap);
-    return seq(
-        str('('),
-        alt(repeatSepWithStr(nameWithPad, ','), gap),
-        str(')'),
-    ).takeM();
+    return seq('(', alt(repeatSepWithStr(nameWithPad, ','), gap), ')').takeM();
 }
 
 const nameWithPad = seq(gap, name, gap);
 const nameList = seq('(', repeatSepWithStr(nameWithPad, ','), ')').takeM();
 
 const value = once(
-    repeat1(
-        alt(
-            balancedElement(),
-            str('/'),
-            str('_'),
-            str('-'),
-            str('.'),
-            str('%'),
-        ),
-    ),
+    repeat1(alt(balancedElement(), '/', '_', '-', '.', '%')),
 ).intoStr();
 
 const typeParamWithPad = seq(gap, value, gap, '=', gap, value, gap).intoStr();
 const typeParamList = seq(
-    str('('),
+    '(',
     repeatSepWithStr(typeParamWithPad, ',').map((xs) => xs.join(',')),
-    str(')'),
+    ')',
 ).intoStr();
 const clsType = seq(
     value,
@@ -271,7 +257,7 @@ const mParameter = seq(
     optional(annKeywords(name)),
     optional(annValue),
     gap,
-    str(';'),
+    ';',
 )
     .dropL()
     .map((parts) => {
@@ -312,20 +298,17 @@ const mPropertyOrProjection = seq(
     });
 
 const collationType = alt(
-    str('EXACT'),
-    str('SQLSTRING'),
-    seq(
-        str('SQLUPPER'),
-        optional(seq(str('('), balanced, str(')')).intoStr(), ''),
-    ).intoStr(),
-    str('TRUNCATE'),
-    str('PLUS'),
-    str('MINUS'),
+    'EXACT',
+    'SQLSTRING',
+    seq('SQLUPPER', optional(seq('(', balanced, ')').intoStr(), '')).intoStr(),
+    'TRUNCATE',
+    'PLUS',
+    'MINUS',
 );
 
 const indexPropertyExpression = seq(
     name,
-    alt(str('(KEYS)'), str('(ELEMENTS)'), str('')),
+    alt('(KEYS)', '(ELEMENTS)', ''),
     optional(seq(gap, StR('As'), gap, collationType).intoStr(), ''),
 ).intoStr();
 const indexPropertyExpressionList = seq(
@@ -354,7 +337,7 @@ const index = seq(
     // TODO: fully understand the syntax of index
     optional(indexPropertyExpressionList, ''),
     optional(indexKeywordList),
-    str(';'),
+    ';',
 )
     .dropL()
     .map((parts) => {
@@ -370,7 +353,7 @@ const mForeignKey = seq(
     name,
     optional(seq(gap, seq('(', name, ')').takeM()).intoStr()),
     annMemberKeywordList,
-    str(';'),
+    ';',
 )
     .dropL()
     .map((parts) => {
@@ -419,12 +402,12 @@ const trigger = seq(
     name.named('name'),
     optional(triggerKeywordList).named('keywordList'),
     gap.named('gapNameEnd'),
-    seq(str('{'), balanced, str('}')).takeM().named('implementation'),
+    seq('{', balanced, '}').takeM().named('implementation'),
 )
     .intoObj()
     .map((parts) => new Trigger(parts));
 
-const methodBody = seq(str('{'), balanced, str('}')).takeM();
+const methodBody = seq('{', balanced, '}').takeM();
 const mMethodLike = seq(
     alt(StR('trigger'), StR('method'), StR('classmethod'), StR('query')).named(
         'keyword',

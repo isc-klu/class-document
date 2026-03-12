@@ -2,7 +2,6 @@ import { alt } from './alt.js';
 import {
     repeat,
     strIf,
-    str,
     strWhile1,
     isLetter,
     isNumeral,
@@ -33,16 +32,8 @@ export const singleQuotedContent = once(
         ),
     ),
 ).intoStr();
-export const simpleDQString = seq(
-    str('"'),
-    doubleQuotedContent,
-    str('"'),
-).intoStr();
-export const simpleSQString = seq(
-    str("'"),
-    singleQuotedContent,
-    str("'"),
-).intoStr();
+export const simpleDQString = seq('"', doubleQuotedContent, '"').intoStr();
+export const simpleSQString = seq("'", singleQuotedContent, "'").intoStr();
 export const simpleString = alt(simpleDQString, simpleSQString);
 
 export const isNonSpecialSymbol = (c: string) =>
@@ -56,10 +47,10 @@ export const balancedElement = (
             word(alsoLetter),
             once(strWhile1(isNumeral)),
             simpleString,
-            seq(str('('), balanced, str(')')).intoStr(),
-            seq(str('['), balanced, str(']')).intoStr(),
-            seq(str('{'), balanced, str('}')).intoStr(),
-            seq(str('<'), balanced, str('>')).intoStr(),
+            seq('(', balanced, ')').intoStr(),
+            seq('[', balanced, ']').intoStr(),
+            seq('{', balanced, '}').intoStr(),
+            seq('<', balanced, '>').intoStr(),
         ),
     );
 

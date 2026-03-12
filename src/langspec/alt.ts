@@ -1,8 +1,17 @@
-import { fail, type ParserTuple, succ } from './core.js';
+import {
+    type AlmostParser,
+    type AlmostParserOutput,
+    fail,
+    succ,
+    toParser,
+} from './core.js';
 import { type Parser } from './core.js';
 
-export function alt<T extends any[]>(...ps: ParserTuple<T>): Parser<T[number]> {
-    return ps.reduceRight((acc, p) => p.alt2(acc), fail);
+export function alt<T extends AlmostParser[]>(...ps: T) {
+    return ps.reduce<Parser<AlmostParserOutput<T[number]>>>(
+        (acc, p) => acc.alt2(toParser(p)),
+        fail,
+    );
 }
 
 export function optional<A, B = null>(p: Parser<A>, x?: B): Parser<A | B>;
