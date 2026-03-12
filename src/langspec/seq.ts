@@ -1,9 +1,17 @@
-import { succ, type Parsers } from './core.js';
+import {
+    toParser,
+    succ,
+    type AlmostParser,
+    type AlmostParserOutput,
+} from './core.js';
 import { type Parser } from './core.js';
 
-export function seq<T extends any[]>(...ps: Parsers<T>): Parser<T> {
+export function seq<T extends AlmostParser[]>(
+    ...ps: T
+): Parser<{ [K in keyof T]: AlmostParserOutput<T[K]> }> {
     return ps.reduce(
-        (acc, p) => acc.seq2(p).map(([xs, x]) => [...xs, x]),
-        succ([] as T[]),
+        (acc: Parser<any>, p) =>
+            acc.seq2(toParser(p)).map(([xs, x]) => [...xs, x]),
+        succ([] as any),
     );
 }

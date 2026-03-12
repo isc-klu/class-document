@@ -74,10 +74,6 @@ export function seqDrop2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
     return seq(p1, p2).map(([x, _]) => x);
 }
 
-export function seqDrop13<T>(p1: string, p2: Parser<T>, p3: string): Parser<T> {
-    return seq(str(p1), p2, str(p3)).map(([_1, x, _2]) => x);
-}
-
 export const dbg = <T>(p: Parser<T>, where = 'DBG') =>
     p.map((x) => {
         console.log(`${where}: ` + JSON.stringify(x));

@@ -27,7 +27,6 @@ import {
     repeat1,
     repeatSep,
     seqStr,
-    seqDrop13,
     seqDrop2,
     repeatSepWithStr,
 } from './langspec/index.js';
@@ -107,7 +106,7 @@ function commaSeperatedListOf<X>(
 }
 
 const nameWithPad = seq(gap, name, gap);
-const nameList = seqDrop13('(', repeatSepWithStr(nameWithPad, ','), ')');
+const nameList = seq('(', repeatSepWithStr(nameWithPad, ','), ')').takeM();
 
 const value = once(
     repeat1(
@@ -172,7 +171,7 @@ const annKeywords = (keywordName: Parser<string>) => {
     );
     const keywordWithPad = seq(gap, keywordClause, gap);
     const keywords = alt(repeatSepWithStr(keywordWithPad, ','), gap);
-    const keywordList = seqDrop13('[', keywords, ']');
+    const keywordList = seq('[', keywords, ']').takeM();
     const annKeywords = seq(gap, keywordList).map(
         (parts) => new AnnKeywordList(...parts),
     );
@@ -258,7 +257,7 @@ const arg = seqStr(
 );
 const argWithPad = seq(gap, arg, gap);
 const args = once(repeatSepWithStr(argWithPad, ','));
-const argList = seqDrop13('(', args, ')');
+const argList = seq('(', args, ')').takeM();
 
 const ancestor = alt(name, nameList);
 
@@ -376,7 +375,7 @@ const mForeignKey = seqDrop2(
         filter(nameList, (ns) => ns.length > 0),
         seqStr(gap1, StR('References'), gap1),
         name,
-        optional(seqStr(gap, seqDrop13('(', name, ')'))),
+        optional(seqStr(gap, seq('(', name, ')').takeM())),
         annMemberKeywordList,
     ),
     str(';'),
@@ -390,7 +389,7 @@ const mXData = seq(
     name,
     optional(annMemberKeywordList, null),
     gap,
-    seqDrop13('{', balanced, '}'),
+    seq('{', balanced, '}').takeM(),
 ).map((parts) => {
     return new MXDataOrStorage(...parts);
 });
@@ -466,7 +465,7 @@ const memberWithComment = seq(dComment, gap, member).map(
     },
 );
 const members = repeatSep(gap, memberWithComment);
-const memberList = seqDrop13('{', members, '}');
+const memberList = seq('{', members, '}').takeM();
 const document = seqDrop2(
     seq(
         gap,

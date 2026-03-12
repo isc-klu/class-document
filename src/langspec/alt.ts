@@ -1,7 +1,7 @@
-import { fail, type Parsers, succ } from './core.js';
+import { fail, type ParserTuple, succ } from './core.js';
 import { type Parser } from './core.js';
 
-export function alt<T extends any[]>(...ps: Parsers<T>): Parser<T[number]> {
+export function alt<T extends any[]>(...ps: ParserTuple<T>): Parser<T[number]> {
     return ps.reduceRight((acc, p) => p.alt2(acc), fail);
 }
 

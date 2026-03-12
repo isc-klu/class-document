@@ -1,3 +1,5 @@
+import { str } from './index.js';
+
 export interface SrcLoc {
     line: number;
     char: number;
@@ -226,6 +228,25 @@ export const strWhile = (p: (x: string) => boolean = (_) => true) =>
 export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
     return p.bind((x) => (f(x) ? succ(x) : fail));
 }
-export type Parsers<T extends any[]> = {
+
+export type ParserTuple<T extends any[]> = {
     [K in keyof T]: Parser<T[K]>;
 };
+
+export type AlmostParser = Parser<any> | string;
+
+export type AlmostParserOutput<T> =
+    T extends Parser<infer T> ? T : T extends string ? T : never;
+
+export type ToParser<T> = Parser<AlmostParserOutput<T>>;
+
+// type t1 = ToParser<Parser<string>>;
+// type t2 = ToParser<Parser<number>>;
+// type t3 = ToParser<')'>;
+
+export const toParser = <T extends AlmostParser>(
+    from: T,
+): Parser<AlmostParserOutput<T>> =>
+    typeof from === 'string'
+        ? (str(from) as Parser<AlmostParserOutput<T>>)
+        : from;
