@@ -42,11 +42,11 @@ To illustrate a few more key concepts, consider the argList definition and relat
 
 ```typescript
 const annArgMode = alt(
-    seqFlatten(StR('Output'), gap1),
-    seqFlatten(StR('ByRef'), gap1),
+    seqJoin(StR('Output'), gap1),
+    seqJoin(StR('ByRef'), gap1),
 );
-const annArgDefault = seqFlatten(gap, str('='), gap, value);
-const arg = seqFlatten(
+const annArgDefault = seqJoin(gap, str('='), gap, value);
+const arg = seqJoin(
     optional(annArgMode),
     name,
     optional(annType),
@@ -72,3 +72,7 @@ Below is a summary of common combinators used in the grammar:
 * seqJoin(x ...) — sequence of elements x ..., each producing a string; results are concatenated
 * seqDrop2(x, y) — sequence of x then y; result drops y
 * seqDrop13(s, x, t) — sequence of literal s, then x, then literal t; result drops s and t
+
+## Next Step
+
+My ultimate objective is to maintain one unified definition that can be executed as a parser, used to generate random ObjectScript code, and also print a clean, human‑readable EBNF grammar.

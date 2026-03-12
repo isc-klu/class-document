@@ -1,6 +1,6 @@
 import { alt } from './alt.js';
 import {
-    flatten,
+    join,
     repeat,
     strIf,
     seqJoin,
@@ -14,7 +14,7 @@ import {
 } from './index.js';
 import { once, type Parser, rec } from './core.js';
 
-export const doubleQuotedContent = flatten(
+export const doubleQuotedContent = join(
     once(
         repeat(
             alt(
@@ -26,7 +26,7 @@ export const doubleQuotedContent = flatten(
         ),
     ),
 );
-export const singleQuotedContent = flatten(
+export const singleQuotedContent = join(
     once(
         repeat(
             alt(
@@ -68,10 +68,10 @@ export const balancedElement = (
         ),
     );
 
-const balancedSection = flatten(once(repeat1(balancedElement())));
+const balancedSection = join(once(repeat1(balancedElement())));
 
 export const balanced: Parser<string> = rec(() =>
-    flatten(
+    join(
         repeat(
             alt(
                 once(strWhile1(isSpace)),

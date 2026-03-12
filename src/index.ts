@@ -16,7 +16,7 @@ import {
 } from './classes.js';
 import {
     strIf,
-    flatten,
+    join,
     isButNL,
     isNumeral,
     isSpace,
@@ -50,14 +50,14 @@ const rCommentContentElem = alt(
     once(strWhile1((c) => c !== '*')),
     strIf(2, (s) => s != '*/'),
 );
-const rCommentContent = flatten(repeat(rCommentContentElem));
+const rCommentContent = join(repeat(rCommentContentElem));
 const rCommentEnd = str('*/');
-const rComment = flatten(seq(rCommentStart, rCommentContent, rCommentEnd));
+const rComment = join(seq(rCommentStart, rCommentContent, rCommentEnd));
 
 // Line Comment
 const lCommentHead = alt(str('//'), str('#;'));
 const lCommentContent = alt(
-    flatten(
+    join(
         seq(
             strIf(1, (c) => /[^\n\/]/.test(c)),
             strWhile(isButNL),
@@ -66,12 +66,12 @@ const lCommentContent = alt(
     str(''),
     eof(''),
 );
-const lComment = flatten(seq(lCommentHead, lCommentContent, str('\n')));
+const lComment = join(seq(lCommentHead, lCommentContent, str('\n')));
 
 // Gap Between "Meaningful" Elements
 const gapElem = once(alt(strWhile1(isSpace), lComment, rComment));
-const gap = flatten(repeat(gapElem));
-const gap1 = flatten(repeat1(gapElem));
+const gap = join(repeat(gapElem));
+const gap1 = join(repeat1(gapElem));
 
 // Document Dependencies (i.e., import, include, and includegenerator clauses)
 const dependencyKeyword = alt(
@@ -85,7 +85,7 @@ const dependency = seq(dependencyKeyword, gap1, strWhile1(isButNL)).map(
 const dependencies = repeat(dependency);
 
 // Document Comments (only allowed before the class and class members)
-const dCommentLine = flatten(
+const dCommentLine = join(
     seq(strWhile(isSpaceButNL), str('///'), strWhile(isButNL), str('\n')),
 );
 const dComment = repeat(dCommentLine).map((parts) => new Description(parts));
@@ -98,7 +98,7 @@ const name = alt(
 const nameWithPad = seq(gap, name, gap);
 const nameList = seqDrop13('(', repeatSepWithStr(nameWithPad, ','), ')');
 
-const value = flatten(
+const value = join(
     once(
         repeat1(
             alt(
@@ -126,8 +126,8 @@ const annType = seqJoin(gap, StR('as'), gap, clsType);
 const annKeywords = (keywordName: Parser<string>) => {
     const keywordValueAnn = seqJoin(gap, str('='), gap, value);
     const keywordClause = alt(
-        flatten(seq(keywordName, optional(keywordValueAnn, ''))),
-        flatten(seq(StR('Not'), gap1, keywordName)),
+        join(seq(keywordName, optional(keywordValueAnn, ''))),
+        join(seq(StR('Not'), gap1, keywordName)),
     );
     const keywordWithPad = seq(gap, keywordClause, gap);
     const keywords = alt(repeatSepWithStr(keywordWithPad, ','), gap);
