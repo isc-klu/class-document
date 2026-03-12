@@ -66,10 +66,6 @@ export const isChar = (x: string) => x.length === 1;
 export const isButNL = (x: string) => /[^\n]/.test(x);
 export const isSpaceButNL = (x: string) => /[\t\r ]/.test(x);
 
-export function seqStr(...ps: Parser<string>[]): Parser<string> {
-    return seq(...ps).intoStr();
-}
-
 export function seqDrop2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
     return seq(p1, p2).map(([x, _]) => x);
 }

@@ -26,7 +26,6 @@ import {
     repeat,
     repeat1,
     repeatSep,
-    seqStr,
     seqDrop2,
     repeatSepWithStr,
 } from './langspec/index.js';
@@ -121,15 +120,26 @@ const value = once(
     ),
 ).intoStr();
 
-const typeParamWithPad = seqStr(gap, value, gap, str('='), gap, value, gap);
-const typeParamList = seqStr(
+const typeParamWithPad = seq(
+    gap,
+    value,
+    gap,
+    str('='),
+    gap,
+    value,
+    gap,
+).intoStr();
+const typeParamList = seq(
     str('('),
     repeatSepWithStr(typeParamWithPad, ',').map((xs) => xs.join(',')),
     str(')'),
-);
-const clsType = seqStr(value, optional(seqStr(gap, typeParamList), ''));
+).intoStr();
+const clsType = seq(
+    value,
+    optional(seq(gap, typeParamList).intoStr(), ''),
+).intoStr();
 
-const annType = seqStr(gap, StR('as'), gap, clsType);
+const annType = seq(gap, StR('as'), gap, clsType).intoStr();
 
 const assignedKeyword = <Name extends string, Values extends string[]>(
     name: Name,
@@ -164,7 +174,7 @@ const genericKeyword = <Name extends string>(name: Name) =>
     alt(negatableKeyword(name), genericAssignedKeyword(name));
 
 const annKeywords = (keywordName: Parser<string>) => {
-    const keywordValueAnn = seqStr(gap, str('='), gap, value);
+    const keywordValueAnn = seq(gap, str('='), gap, value).intoStr();
     const keywordClause = alt(
         seq(keywordName, optional(keywordValueAnn, '')).intoStr(),
         seq(StR('Not'), gap1, keywordName).intoStr(),
@@ -247,14 +257,14 @@ const annKeywordsForMethodLike = annKeywords(
 );
 const annMemberKeywordList = annKeywords(name);
 
-const annArgMode = alt(seqStr(StR('Output'), gap1), seqStr(StR('ByRef'), gap1));
-const annArgDefault = seqStr(gap, str('='), gap, value);
-const arg = seqStr(
+const annArgMode = seq(alt(StR('Output'), StR('ByRef')), gap1).intoStr();
+const annArgDefault = seq(gap, str('='), gap, value).intoStr();
+const arg = seq(
     optional(annArgMode),
     name,
     optional(annType),
     optional(annArgDefault),
-);
+).intoStr();
 const argWithPad = seq(gap, arg, gap);
 const args = once(repeatSepWithStr(argWithPad, ','));
 const argList = seq('(', args, ')').takeM();
@@ -265,7 +275,7 @@ const annExtends = seq(gap1, StR('extends'), gap1, ancestor).map(
     (parts) => new Extends(...parts),
 );
 
-const annValue = seq(seqStr(gap, str('='), gap), value).map(
+const annValue = seq(seq(gap, str('='), gap).intoStr(), value).map(
     (parts) => new AnnValue(...parts),
 );
 
@@ -284,20 +294,20 @@ const mParameter = seqDrop2(
     return new MParameter(...parts);
 });
 
-const propertyCollection = seqStr(
+const propertyCollection = seq(
     gap1,
     alt(StR('List'), StR('Array')),
     gap1,
     StR('Of'),
-);
+).intoStr();
 
-const asPropertyType = seqStr(
+const asPropertyType = seq(
     gap,
     StR('as'),
     optional(propertyCollection, ''),
     gap1,
     clsType,
-);
+).intoStr();
 
 const mPropertyOrProjection = seqDrop2(
     seq(
@@ -373,9 +383,9 @@ const mForeignKey = seqDrop2(
         gap1,
         name,
         filter(nameList, (ns) => ns.length > 0),
-        seqStr(gap1, StR('References'), gap1),
+        seq(gap1, StR('References'), gap1).intoStr(),
         name,
-        optional(seqStr(gap, seq('(', name, ')').takeM())),
+        optional(seq(gap, seq('(', name, ')').takeM()).intoStr()),
         annMemberKeywordList,
     ),
     str(';'),

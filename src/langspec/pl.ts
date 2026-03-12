@@ -2,7 +2,6 @@ import { alt } from './alt.js';
 import {
     repeat,
     strIf,
-    seqStr,
     str,
     strWhile1,
     isLetter,
@@ -12,6 +11,7 @@ import {
     isSpace,
 } from './index.js';
 import { once, type Parser, rec } from './core.js';
+import { seq } from './seq.js';
 
 export const doubleQuotedContent = once(
     repeat(
@@ -33,8 +33,16 @@ export const singleQuotedContent = once(
         ),
     ),
 ).intoStr();
-export const simpleDQString = seqStr(str('"'), doubleQuotedContent, str('"'));
-export const simpleSQString = seqStr(str("'"), singleQuotedContent, str("'"));
+export const simpleDQString = seq(
+    str('"'),
+    doubleQuotedContent,
+    str('"'),
+).intoStr();
+export const simpleSQString = seq(
+    str("'"),
+    singleQuotedContent,
+    str("'"),
+).intoStr();
 export const simpleString = alt(simpleDQString, simpleSQString);
 
 export const isNonSpecialSymbol = (c: string) =>
@@ -48,10 +56,10 @@ export const balancedElement = (
             word(alsoLetter),
             once(strWhile1(isNumeral)),
             simpleString,
-            seqStr(str('('), balanced, str(')')),
-            seqStr(str('['), balanced, str(']')),
-            seqStr(str('{'), balanced, str('}')),
-            seqStr(str('<'), balanced, str('>')),
+            seq(str('('), balanced, str(')')).intoStr(),
+            seq(str('['), balanced, str(']')).intoStr(),
+            seq(str('{'), balanced, str('}')).intoStr(),
+            seq(str('<'), balanced, str('>')).intoStr(),
         ),
     );
 
