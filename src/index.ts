@@ -445,7 +445,7 @@ const memberWithComment = seq(dComment, gap, member).map(
 );
 const members = repeatSep(gap, memberWithComment);
 const memberList = seq('{', members, '}').takeM();
-const document = seq(
+export const document = seq(
     gap,
     dependencies,
     gap,
@@ -465,7 +465,3 @@ const document = seq(
     .map((parts) => {
         return new Document(...parts);
     });
-
-export const parseDocument = (input: string): Document | undefined => {
-    return document.exec(input)[0]?.value;
-};

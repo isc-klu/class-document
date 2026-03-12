@@ -1,6 +1,7 @@
 import * as fs from 'fs';
-import { parseDocument } from '../src/index.js';
+import { document } from '../src/index.js';
 import assert from 'assert';
+import type { Document } from '../src/classes.js';
 
 class Section {
     title: string;
@@ -167,6 +168,10 @@ const semanticErrors = [
     'Invalid — SqlComputeCode missing {}',
     'Invalid — unknown property keyword',
 ];
+
+const parseDocument = (input: string): Document | undefined => {
+    return document.exec(input)[0]?.value;
+};
 
 for (const file of fs.readdirSync(`./test/resource`)) {
     const fileString = fs.readFileSync(`./test/resource/${file}`);
