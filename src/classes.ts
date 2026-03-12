@@ -155,16 +155,15 @@ export class MPropertyOrProjection extends Member {
     }
 }
 
-export class MIndex extends Member {
-    content: string;
+export class Index extends Member {
     constructor(
         keyword: string,
         gapKeywordName: string,
         name: string,
-        content: string,
+        private readonly propertyExpressionList: string,
+        private readonly keywordList: AnnKeywordList | null,
     ) {
         super(keyword, gapKeywordName, name, '');
-        this.content = content;
     }
 
     toString(): string {
@@ -173,7 +172,8 @@ export class MIndex extends Member {
                 this.gapKeywordName +
                 this.name +
                 this.gapNameEnd +
-                this.content +
+                this.propertyExpressionList +
+                (this.keywordList?.toString() ?? '') +
                 ';',
         );
     }

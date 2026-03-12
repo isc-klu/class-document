@@ -14,7 +14,7 @@ export function str<T extends string>(x: T): Parser<T> {
 }
 
 // case-insensitive version
-export function StR<T extends string>(x: T): Parser<T> {
+export function StR<T extends string>(x: T): Parser<string> {
     return strIf(
         x.length,
         (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase(),

@@ -71,8 +71,8 @@ export interface Result<T> {
 
 export type ResultSet<T> = IteratorObject<Result<T>, void>;
 
-type DropFst<T extends any[]> = T extends [infer _, ...infer R] ? R : never;
-type DropLst<T extends any[]> = T extends [...infer R, infer _] ? R : never;
+type DropF<T> = T extends [infer _, ...infer R] ? R : never;
+type DropL<T> = T extends [...infer R, infer _] ? R : never;
 type DropFL<T> = T extends [infer _, ...infer R, infer _] ? R : never;
 
 type TakeM<T> = T extends [infer _, infer R, infer _] ? R : never;
@@ -173,6 +173,30 @@ export class Parser<A> {
             } else {
                 throw new Error('The input is not an array');
             }
+        });
+    }
+    public dropF(): Parser<DropF<A>> {
+        return this.map((xs) => {
+            if (Array.isArray(xs) && xs.length >= 2) {
+                return xs.slice(1) as DropF<A>;
+            } else {
+                throw new Error('The input is not an array');
+            }
+        });
+    }
+    public dropL(): Parser<DropL<A>> {
+        return this.map((xs) => {
+            if (Array.isArray(xs) && xs.length >= 2) {
+                return xs.slice(0, xs.length - 1) as DropL<A>;
+            } else {
+                throw new Error('The input is not an array');
+            }
+        });
+    }
+    public dbg(where: string = 'DBG'): Parser<A> {
+        return this.map((x) => {
+            console.log(`${where}: `, JSON.stringify(x));
+            return x;
         });
     }
 }

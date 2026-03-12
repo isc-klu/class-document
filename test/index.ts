@@ -172,6 +172,9 @@ for (const file of fs.readdirSync(`./test/resource`)) {
     const fileString = fs.readFileSync(`./test/resource/${file}`);
     const suite = new Suite(fileString.toString());
     for (const sec of suite.content) {
+        // if (sec.title != 'Valid Index: collection properties (KEYS/ELEMENTS)') {
+        //     continue;
+        // }
         if (semanticErrors.includes(sec.title)) {
             continue;
         }

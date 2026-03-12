@@ -9,7 +9,7 @@ import {
     Member,
     MethodLikeMember,
     MParameter,
-    MIndex,
+    Index,
     Trigger,
     MXDataOrStorage,
     MPropertyOrProjection,
@@ -94,6 +94,17 @@ const name = alt(
     word((c) => isNumeral(c) || ['%', '.'].includes(c)),
     simpleString,
 );
+
+function commaSeperatedListOf<X>(
+    name: Parser<X>,
+): Parser<string | [string, X, string][]> {
+    const nameWithPad = seq(gap, name, gap);
+    return seq(
+        str('('),
+        alt(repeatSepWithStr(nameWithPad, ','), gap),
+        str(')'),
+    ).takeM();
+}
 
 const nameWithPad = seq(gap, name, gap);
 const nameList = seqDrop13('(', repeatSepWithStr(nameWithPad, ','), ')');
@@ -275,18 +286,55 @@ const mPropertyOrProjection = seqDrop2(
     return new MPropertyOrProjection(...parts);
 });
 
-const mIndex = seqDrop2(
+const collationType = alt(
+    str('EXACT'),
+    str('SQLSTRING'),
     seq(
-        alt(StR('index')),
-        gap1,
-        name,
-        // TODO: fully understand the syntax of index
-        strWhile((x) => x !== ';'),
+        str('SQLUPPER'),
+        optional(seq(str('('), balanced, str(')')).intoStr(), ''),
+    ).intoStr(),
+    str('TRUNCATE'),
+    str('PLUS'),
+    str('MINUS'),
+);
+
+const indexPropertyExpression = seq(
+    name,
+    alt(str('(KEYS)'), str('(ELEMENTS)'), str('')),
+    optional(seq(gap, StR('As'), gap, collationType).intoStr(), ''),
+).intoStr();
+const indexPropertyExpressionList = seq(
+    gap,
+    StR('On'),
+    gap,
+    alt(
+        indexPropertyExpression,
+        commaSeperatedListOf(indexPropertyExpression).map(
+            (x) =>
+                '(' +
+                (typeof x === 'string'
+                    ? x
+                    : x.map((pep) => pep.join('')).join(',')) +
+                ')',
+        ),
     ),
+).intoStr();
+
+const indexKeywordList = annMemberKeywordList;
+
+const index = seq(
+    alt(StR('index')),
+    gap1,
+    name,
+    // TODO: fully understand the syntax of index
+    optional(indexPropertyExpressionList, ''),
+    optional(indexKeywordList),
     str(';'),
-).map((parts) => {
-    return new MIndex(...parts);
-});
+)
+    .dropL()
+    .map((parts) => {
+        return new Index(...parts);
+    });
 
 const mForeignKey = seqDrop2(
     seq(
@@ -365,7 +413,7 @@ const mMethodLike = seq(
 const member = alt<Member>(
     mParameter,
     mPropertyOrProjection,
-    mIndex,
+    index,
     mForeignKey,
     mXData,
     trigger,
