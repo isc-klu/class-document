@@ -73,18 +73,24 @@ export type ResultSet<T> = IteratorObject<Result<T>, void>;
 
 type DropFst<T extends any[]> = T extends [infer _, ...infer R] ? R : never;
 type DropLst<T extends any[]> = T extends [...infer R, infer _] ? R : never;
-type DropFstLst<T extends any[]> = T extends [infer _, ...infer R, infer _] ? R : never;
+type DropFstLst<T extends any[]> = T extends [infer _, ...infer R, infer _]
+    ? R
+    : never;
 
-type FunctionOf<T> = (_: T) => never
+type FunctionOf<T> = (_: T) => never;
 
 type CommonInput<T> = [T] extends [(_: infer I) => never] ? I : never;
 
-type UnionToIntersection<T> = CommonInput<T extends any ? FunctionOf<T> : never>
+type UnionToIntersection<T> = CommonInput<
+    T extends any ? FunctionOf<T> : never
+>;
 
-type Intersection<T> = T extends any[] ? UnionToIntersection<T[number]> : never
+type Intersection<T> = T extends any[] ? UnionToIntersection<T[number]> : never;
 
-export const compose = <T extends any[]>(p: Parser<T>): Parser<Intersection<T>> =>
-    p.map((xs) => Object.assign({}, ...xs) as Intersection<T>)
+export const compose = <T extends any[]>(
+    p: Parser<T>,
+): Parser<Intersection<T>> =>
+    p.map((xs) => Object.assign({}, ...xs) as Intersection<T>);
 
 export class Parser<A> {
     private readonly f: (reader: Reader) => ResultSet<A>;
@@ -119,35 +125,41 @@ export class Parser<A> {
     public map<Y>(f: (x: A) => Y): Parser<Y> {
         return this.bind((x) => succ(f(x)));
     }
-    public intoStr(sep: string = ""): Parser<A extends string[] ? string : never> {
+    public intoStr(
+        sep: string = '',
+    ): Parser<A extends string[] ? string : never> {
         return this.map((xs) => {
             if (Array.isArray(xs)) {
-                return xs.join(sep) as (A extends string[] ? string : never)
+                return xs.join(sep) as A extends string[] ? string : never;
             } else {
-                throw new Error("The input is not an array");
+                throw new Error('The input is not an array');
             }
-        })
+        });
     }
-    public named<K extends PropertyKey>(k: K): Parser<Record<K,A>> {
-        return this.map((v) => ({ [k]: v } as Record<K, A>))
+    public named<K extends PropertyKey>(k: K): Parser<Record<K, A>> {
+        return this.map((v) => ({ [k]: v }) as Record<K, A>);
     }
     public intoObj(): Parser<A extends any[] ? Intersection<A> : never> {
         return this.map((xs) => {
             if (Array.isArray(xs)) {
-                return Object.assign({}, ...xs) as (A extends any[] ? Intersection<A> : never)
+                return Object.assign({}, ...xs) as A extends any[]
+                    ? Intersection<A>
+                    : never;
             } else {
-                throw new Error("The input is not an array");
+                throw new Error('The input is not an array');
             }
-        })
+        });
     }
-    public drop13(): Parser<A extends [infer _1, infer T2, infer _3] ? T2 : never> {
+    public drop13(): Parser<
+        A extends [infer _1, infer T2, infer _3] ? T2 : never
+    > {
         return this.map((xs) => {
             if (Array.isArray(xs) && xs.length === 3) {
-                return xs[1]
+                return xs[1];
             } else {
-                throw new Error("The input is not an array");
+                throw new Error('The input is not an array');
             }
-        })
+        });
     }
 }
 

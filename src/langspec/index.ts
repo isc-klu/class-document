@@ -66,12 +66,8 @@ export const isChar = (x: string) => x.length === 1;
 export const isButNL = (x: string) => /[^\n]/.test(x);
 export const isSpaceButNL = (x: string) => /[\t\r ]/.test(x);
 
-export const join = (p: Parser<string[]>): Parser<string> => {
-    return p.map((xs: string[]) => xs.join(''));
-};
-
-export function seqJoin(...ps: Parser<string>[]): Parser<string> {
-    return join(seq(...ps));
+export function seqStr(...ps: Parser<string>[]): Parser<string> {
+    return seq(...ps).intoStr();
 }
 
 export function seqDrop2<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1> {
@@ -88,14 +84,17 @@ export const dbg = <T>(p: Parser<T>, where = 'DBG') =>
         return x;
     });
 
-type FunctionOf<T> = (_: T) => never
+type FunctionOf<T> = (_: T) => never;
 
 type CommonInput<T> = [T] extends [(_: infer I) => never] ? I : never;
 
-type UnionToIntersection<T> = CommonInput<T extends any ? FunctionOf<T> : never>
+type UnionToIntersection<T> = CommonInput<
+    T extends any ? FunctionOf<T> : never
+>;
 
-type Intersection<T extends any[]> = UnionToIntersection<T[number]>
+type Intersection<T extends any[]> = UnionToIntersection<T[number]>;
 
-export const compose = <T extends any[]>(p: Parser<T>): Parser<Intersection<T>> =>
-    p.map((xs) => Object.assign({}, ...xs) as Intersection<T>)
-
+export const compose = <T extends any[]>(
+    p: Parser<T>,
+): Parser<Intersection<T>> =>
+    p.map((xs) => Object.assign({}, ...xs) as Intersection<T>);

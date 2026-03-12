@@ -16,7 +16,6 @@ import {
 } from './classes.js';
 import {
     strIf,
-    join,
     isButNL,
     isNumeral,
     isSpace,
@@ -27,7 +26,7 @@ import {
     repeat,
     repeat1,
     repeatSep,
-    seqJoin,
+    seqStr,
     seqDrop13,
     seqDrop2,
     repeatSepWithStr,
@@ -50,28 +49,26 @@ const rCommentContentElem = alt(
     once(strWhile1((c) => c !== '*')),
     strIf(2, (s) => s != '*/'),
 );
-const rCommentContent = join(repeat(rCommentContentElem));
+const rCommentContent = repeat(rCommentContentElem).intoStr();
 const rCommentEnd = str('*/');
-const rComment = join(seq(rCommentStart, rCommentContent, rCommentEnd));
+const rComment = seq(rCommentStart, rCommentContent, rCommentEnd).intoStr();
 
 // Line Comment
 const lCommentHead = alt(str('//'), str('#;'));
 const lCommentContent = alt(
-    join(
-        seq(
-            strIf(1, (c) => /[^\n\/]/.test(c)),
-            strWhile(isButNL),
-        ),
-    ),
+    seq(
+        strIf(1, (c) => /[^\n\/]/.test(c)),
+        strWhile(isButNL),
+    ).intoStr(),
     str(''),
     eof(''),
 );
-const lComment = join(seq(lCommentHead, lCommentContent, str('\n')));
+const lComment = seq(lCommentHead, lCommentContent, str('\n')).intoStr();
 
 // Gap Between "Meaningful" Elements
 const gapElem = once(alt(strWhile1(isSpace), lComment, rComment));
-const gap = join(repeat(gapElem));
-const gap1 = join(repeat1(gapElem));
+const gap = repeat(gapElem).intoStr();
+const gap1 = repeat1(gapElem).intoStr();
 
 // Document Dependencies (i.e., import, include, and includegenerator clauses)
 const dependencyKeyword = alt(
@@ -85,9 +82,12 @@ const dependency = seq(dependencyKeyword, gap1, strWhile1(isButNL)).map(
 const dependencies = repeat(dependency);
 
 // Document Comments (only allowed before the class and class members)
-const dCommentLine = join(
-    seq(strWhile(isSpaceButNL), str('///'), strWhile(isButNL), str('\n')),
-);
+const dCommentLine = seq(
+    strWhile(isSpaceButNL),
+    str('///'),
+    strWhile(isButNL),
+    str('\n'),
+).intoStr();
 const dComment = repeat(dCommentLine).map((parts) => new Description(parts));
 
 const name = alt(
@@ -98,36 +98,34 @@ const name = alt(
 const nameWithPad = seq(gap, name, gap);
 const nameList = seqDrop13('(', repeatSepWithStr(nameWithPad, ','), ')');
 
-const value = join(
-    once(
-        repeat1(
-            alt(
-                balancedElement(),
-                str('/'),
-                str('_'),
-                str('-'),
-                str('.'),
-                str('%'),
-            ),
+const value = once(
+    repeat1(
+        alt(
+            balancedElement(),
+            str('/'),
+            str('_'),
+            str('-'),
+            str('.'),
+            str('%'),
         ),
     ),
-);
+).intoStr();
 
-const typeParamWithPad = seqJoin(gap, value, gap, str('='), gap, value, gap);
-const typeParamList = seqJoin(
+const typeParamWithPad = seqStr(gap, value, gap, str('='), gap, value, gap);
+const typeParamList = seqStr(
     str('('),
     repeatSepWithStr(typeParamWithPad, ',').map((xs) => xs.join(',')),
     str(')'),
 );
-const clsType = seqJoin(value, optional(seqJoin(gap, typeParamList), ''));
+const clsType = seqStr(value, optional(seqStr(gap, typeParamList), ''));
 
-const annType = seqJoin(gap, StR('as'), gap, clsType);
+const annType = seqStr(gap, StR('as'), gap, clsType);
 
 const annKeywords = (keywordName: Parser<string>) => {
-    const keywordValueAnn = seqJoin(gap, str('='), gap, value);
+    const keywordValueAnn = seqStr(gap, str('='), gap, value);
     const keywordClause = alt(
-        join(seq(keywordName, optional(keywordValueAnn, ''))),
-        join(seq(StR('Not'), gap1, keywordName)),
+        seq(keywordName, optional(keywordValueAnn, '')).intoStr(),
+        seq(StR('Not'), gap1, keywordName).intoStr(),
     );
     const keywordWithPad = seq(gap, keywordClause, gap);
     const keywords = alt(repeatSepWithStr(keywordWithPad, ','), gap);
@@ -207,12 +205,9 @@ const annKeywordsForMethodLike = annKeywords(
 );
 const annKeywordForMember = annKeywords(name);
 
-const annArgMode = alt(
-    seqJoin(StR('Output'), gap1),
-    seqJoin(StR('ByRef'), gap1),
-);
-const annArgDefault = seqJoin(gap, str('='), gap, value);
-const arg = seqJoin(
+const annArgMode = alt(seqStr(StR('Output'), gap1), seqStr(StR('ByRef'), gap1));
+const annArgDefault = seqStr(gap, str('='), gap, value);
+const arg = seqStr(
     optional(annArgMode),
     name,
     optional(annType),
@@ -228,7 +223,7 @@ const annExtends = seq(gap1, StR('extends'), gap1, ancestor).map(
     (parts) => new Extends(...parts),
 );
 
-const annValue = seq(seqJoin(gap, str('='), gap), value).map(
+const annValue = seq(seqStr(gap, str('='), gap), value).map(
     (parts) => new AnnValue(...parts),
 );
 
@@ -247,14 +242,14 @@ const mParameter = seqDrop2(
     return new MParameter(...parts);
 });
 
-const propertyCollection = seqJoin(
+const propertyCollection = seqStr(
     gap1,
     alt(StR('List'), StR('Array')),
     gap1,
     StR('Of'),
 );
 
-const asPropertyType = seqJoin(
+const asPropertyType = seqStr(
     gap,
     StR('as'),
     optional(propertyCollection, ''),
@@ -299,9 +294,9 @@ const mForeignKey = seqDrop2(
         gap1,
         name,
         filter(nameList, (ns) => ns.length > 0),
-        seqJoin(gap1, StR('References'), gap1),
+        seqStr(gap1, StR('References'), gap1),
         name,
-        optional(seqJoin(gap, seqDrop13('(', name, ')'))),
+        optional(seqStr(gap, seqDrop13('(', name, ')'))),
         annKeywordForMember,
     ),
     str(';'),

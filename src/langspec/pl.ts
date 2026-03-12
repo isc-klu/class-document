@@ -1,9 +1,8 @@
 import { alt } from './alt.js';
 import {
-    join,
     repeat,
     strIf,
-    seqJoin,
+    seqStr,
     str,
     strWhile1,
     isLetter,
@@ -14,40 +13,28 @@ import {
 } from './index.js';
 import { once, type Parser, rec } from './core.js';
 
-export const doubleQuotedContent = join(
-    once(
-        repeat(
-            alt(
-                // backslash followed by anything but newline
-                strIf(2, (s) => /\\[^\n]/.test(s)),
-                // anything but double quote or slash or newline
-                strIf(1, (c) => /[^\\\n"]/.test(c)),
-            ),
+export const doubleQuotedContent = once(
+    repeat(
+        alt(
+            // backslash followed by anything but newline
+            strIf(2, (s) => /\\[^\n]/.test(s)),
+            // anything but double quote or slash or newline
+            strIf(1, (c) => /[^\\\n"]/.test(c)),
         ),
     ),
-);
-export const singleQuotedContent = join(
-    once(
-        repeat(
-            alt(
-                // backslash followed by anything but newline
-                strIf(2, (s) => /\\[^\n]/.test(s)),
-                // anything but double quote or slash or newline
-                strIf(1, (c) => /[^\\\n']/.test(c)),
-            ),
+).intoStr();
+export const singleQuotedContent = once(
+    repeat(
+        alt(
+            // backslash followed by anything but newline
+            strIf(2, (s) => /\\[^\n]/.test(s)),
+            // anything but double quote or slash or newline
+            strIf(1, (c) => /[^\\\n']/.test(c)),
         ),
     ),
-);
-export const simpleDQString = seqJoin(
-    str('"'),
-    doubleQuotedContent,
-    str('"'),
-);
-export const simpleSQString = seqJoin(
-    str("'"),
-    singleQuotedContent,
-    str("'"),
-);
+).intoStr();
+export const simpleDQString = seqStr(str('"'), doubleQuotedContent, str('"'));
+export const simpleSQString = seqStr(str("'"), singleQuotedContent, str("'"));
 export const simpleString = alt(simpleDQString, simpleSQString);
 
 export const isNonSpecialSymbol = (c: string) =>
@@ -61,25 +48,23 @@ export const balancedElement = (
             word(alsoLetter),
             once(strWhile1(isNumeral)),
             simpleString,
-            seqJoin(str('('), balanced, str(')')),
-            seqJoin(str('['), balanced, str(']')),
-            seqJoin(str('{'), balanced, str('}')),
-            seqJoin(str('<'), balanced, str('>')),
+            seqStr(str('('), balanced, str(')')),
+            seqStr(str('['), balanced, str(']')),
+            seqStr(str('{'), balanced, str('}')),
+            seqStr(str('<'), balanced, str('>')),
         ),
     );
 
-const balancedSection = join(once(repeat1(balancedElement())));
+const balancedSection = once(repeat1(balancedElement())).intoStr();
 
 export const balanced: Parser<string> = rec(() =>
-    join(
-        repeat(
-            alt(
-                once(strWhile1(isSpace)),
-                strIf(1, isNonSpecialSymbol),
-                balancedSection,
-            ),
+    repeat(
+        alt(
+            once(strWhile1(isSpace)),
+            strIf(1, isNonSpecialSymbol),
+            balancedSection,
         ),
-    ),
+    ).intoStr(),
 );
 
 export function word(alsoLetter: (c: string) => boolean): Parser<string> {
