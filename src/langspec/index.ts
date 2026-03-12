@@ -1,4 +1,4 @@
-export * from './core.js';
+export * from './coreEBNF.js';
 import {
     fail,
     filter,
@@ -7,7 +7,7 @@ import {
     succ,
     type Parser,
     repeat,
-} from './core.js';
+} from './coreEBNF.js';
 
 export type ParserTuple<T extends any[]> = {
     [K in keyof T]: Parser<T[K]>;

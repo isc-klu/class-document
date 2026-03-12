@@ -5,7 +5,7 @@ type NStr = {
 };
 type NRef = {
     kind: 'ref';
-    content: symbol;
+    content: string;
 };
 export type NAlt = {
     kind: 'alt';
@@ -53,15 +53,15 @@ export function displayNode(
                 content.pop();
             }
             let o = '';
-            if (content.length > 0) {
+            if (content.length > 1) {
                 o =
                     '(' +
-                    node.content
+                    content
                         .map((n) => displayNode(n, false, true))
                         .join(' | ') +
                     ')';
             } else {
-                o = displayNode(node.content[0]!, false, false);
+                o = displayNode(content[0]!, false, false);
             }
             if (isOptional) {
                 o += '?';
@@ -79,7 +79,7 @@ export function displayNode(
         case 'pat':
             return node.content;
         case 'ref':
-            return '<' + node.content.toString().slice(7, -1) + '>';
+            return '<' + node.content + '>';
         case 'rep':
             return displayNode(node.content, false) + '*';
         case 'rep1':

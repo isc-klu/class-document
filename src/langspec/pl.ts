@@ -29,39 +29,43 @@ export const singleQuotedContent = once(
         ),
     ),
 ).intoStr();
-export const simpleDQString = seq('"', doubleQuotedContent, '"').intoStr();
-export const simpleSQString = seq("'", singleQuotedContent, "'").intoStr();
-export const simpleString = alt(simpleDQString, simpleSQString);
+export const simpleDQString = seq('"', doubleQuotedContent, '"')
+    .intoStr()
+    .describe('"..."');
+export const simpleSQString = seq("'", singleQuotedContent, "'")
+    .intoStr()
+    .describe("'...'");
+export const simpleString = alt(simpleDQString, simpleSQString).describe(
+    'string',
+);
 
 export const isNonSpecialSymbol = (c: string) =>
     isSymbol(c) && /[^()\[\]\{\}<>"']/u.test(c);
 
+export const balanced: Parser<string> = repeat(
+    alt(
+        once(strWhile1(isSpace)),
+        strIf(1, isNonSpecialSymbol),
+        rec(() => balancedSection),
+    ),
+)
+    .intoStr()
+    .describe('......');
+
 export const balancedElement = (
     alsoLetter: (c: string) => boolean = (_) => false,
 ) =>
-    rec(() =>
-        alt(
-            word(alsoLetter),
-            once(strWhile1(isNumeral)),
-            simpleString,
-            seq('(', balanced, ')').intoStr(),
-            seq('[', balanced, ']').intoStr(),
-            seq('{', balanced, '}').intoStr(),
-            seq('<', balanced, '>').intoStr(),
-        ),
+    alt(
+        word(alsoLetter),
+        once(strWhile1(isNumeral)),
+        simpleString,
+        seq('(', balanced, ')').intoStr(),
+        seq('[', balanced, ']').intoStr(),
+        seq('{', balanced, '}').intoStr(),
+        seq('<', balanced, '>').intoStr(),
     );
 
 const balancedSection = once(repeat1(balancedElement())).intoStr();
-
-export const balanced: Parser<string> = rec(() =>
-    repeat(
-        alt(
-            once(strWhile1(isSpace)),
-            strIf(1, isNonSpecialSymbol),
-            balancedSection,
-        ),
-    ).intoStr(),
-);
 
 export function word(alsoLetter: (c: string) => boolean): Parser<string> {
     return once(strWhile1((c) => isLetter(c) || alsoLetter(c)));

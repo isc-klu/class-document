@@ -58,11 +58,9 @@ export const compose = <T extends any[]>(
     p.map((xs) => Object.assign({}, ...xs) as Intersection<T>);
 
 export class Parser<A> {
-    id: symbol;
     description?: string;
     private trivial: boolean;
     constructor(public toNode: (shared: Map<string, Node>) => Node) {
-        this.id = Symbol('node');
         this.trivial = false;
         const that = this;
         this.toNode = (shared) => {
@@ -75,7 +73,7 @@ export class Parser<A> {
                 }
                 return {
                     kind: 'ref',
-                    content: Symbol(that.description),
+                    content: that.description,
                 };
             }
             return toNode(shared);
@@ -190,17 +188,11 @@ export class Parser<A> {
 }
 
 export const rec = <T>(lazyP: () => Parser<T>): Parser<T> => {
-    let firstTime = true;
     return new Parser((shared): Node => {
         const p = lazyP();
-        if (firstTime) {
-            firstTime = false;
-            shared.set(p.id.toString(), p.toNode(shared));
-        }
-        return {
-            kind: 'ref',
-            content: p.id,
-        };
+        p.description =
+            p.description ?? 'node' + Math.random().toString().slice(2, 7);
+        return p.toNode(shared);
     });
 };
 

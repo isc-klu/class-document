@@ -114,10 +114,9 @@ const typeParamList = seq(
     repeatSepWithStr(typeParamWithPad, ',').map((xs) => xs.join(',')),
     ')',
 ).intoStr();
-const clsType = seq(
-    value,
-    optional(seq(gap, typeParamList).intoStr(), ''),
-).intoStr();
+const clsType = seq(value, optional(seq(gap, typeParamList).intoStr(), ''))
+    .intoStr()
+    .describe('Class');
 
 const annType = seq(gap, StR('As'), gap, clsType).intoStr();
 
@@ -137,7 +136,7 @@ const genericAssignedKeyword = <Name extends string>(name: Name) =>
         gap,
         '=',
         gap,
-        balancedElement((c) => /[_]/.test(c)),
+        balancedElement((c) => /[_]/.test(c)).describe('...'),
     ).intoStr();
 
 const negatableKeyword = <Name extends string>(name: Name) =>
@@ -191,7 +190,7 @@ const annKeywordsForClass = annKeywords(
         StR('System'),
         StR('ViewQuery'),
     ).describe('ClassKeywords'),
-);
+).describe('ClassKeywordList');
 
 const annKeywordsForMethodLike = annKeywords(
     alt(
@@ -224,7 +223,7 @@ const annKeywordsForMethodLike = annKeywords(
         StR('SqlProc'),
         StR('WebMethod'),
     ).describe('MethodKeywords'),
-);
+).describe('MethodKeywordList');
 const genericKeywordList = annKeywords(name).describe('GenericKeywordList');
 const annMemberKeywordList = genericKeywordList;
 
@@ -235,16 +234,18 @@ const arg = seq(
     name,
     optional(annType),
     optional(annArgDefault),
-).intoStr();
+)
+    .intoStr()
+    .describe('Argument');
 const argWithPad = seq(gap, arg, gap);
 const args = once(repeatSepWithStr(argWithPad, ','));
 const argList = seq('(', args, ')').takeM();
 
 const ancestor = alt(name, nameList);
 
-const annExtends = seq(gap1, StR('extends'), gap1, ancestor).map(
-    (parts) => new Extends(...parts),
-);
+const annExtends = seq(gap1, StR('Extends'), gap1, ancestor)
+    .map((parts) => new Extends(...parts))
+    .describe('Extends');
 
 const annValue = seq(seq(gap, '=', gap).intoStr(), value).map(
     (parts) => new AnnValue(...parts),
@@ -349,7 +350,7 @@ const index = seq(
     .describe('Index');
 
 const mForeignKey = seq(
-    StR('foreignkey'),
+    StR('ForeignKey'),
     gap1,
     name,
     filter(nameList, (ns) => ns.length > 0),
@@ -366,7 +367,7 @@ const mForeignKey = seq(
     .describe('ForeignKey');
 
 const mXData = seq(
-    alt(StR('xdata'), StR('storage')),
+    alt(StR('XData'), StR('Storage')),
     gap1,
     name,
     optional(annMemberKeywordList, null),
@@ -395,7 +396,7 @@ const triggerKeywords = alt(
     assignedKeyword('Language', ['objectscript', 'python', 'tsql']),
     genericAssignedKeyword('NewTable'),
     genericAssignedKeyword('OldTable'),
-    assignedKeywordP('Order', strWhile1(isNumeral)),
+    assignedKeywordP('Order', strWhile1(isNumeral).describe('integer')),
     genericAssignedKeyword('SqlName'),
     assignedKeyword('Time', ['AFTER', 'BEFORE']),
     genericAssignedKeyword('UpdateColumnList'),
