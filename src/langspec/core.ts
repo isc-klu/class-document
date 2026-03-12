@@ -225,4 +225,7 @@ export const strWhile = (p: (x: string) => boolean = (_) => true) =>
 
 export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
     return p.bind((x) => (f(x) ? succ(x) : fail));
-}
+}export type Parsers<T extends any[]> = {
+    [K in keyof T]: Parser<T[K]>;
+};
+

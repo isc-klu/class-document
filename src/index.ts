@@ -132,6 +132,38 @@ const clsType = seqStr(value, optional(seqStr(gap, typeParamList), ''));
 
 const annType = seqStr(gap, StR('as'), gap, clsType);
 
+const assignedKeyword = <Name extends string, Values extends string[]>(
+    name: Name,
+    values: Values,
+) =>
+    seq(
+        StR(name),
+        gap,
+        str('='),
+        gap,
+        alt(...values.map((v) => StR(v))),
+    ).intoStr();
+
+const assignedKeywordP = <Name extends string>(
+    name: Name,
+    value: Parser<string>,
+) => seq(StR(name), gap, str('='), gap, value).intoStr();
+
+const genericAssignedKeyword = <Name extends string>(name: Name) =>
+    seq(
+        StR(name),
+        gap,
+        str('='),
+        gap,
+        balancedElement((c) => /[_]/.test(c)),
+    ).intoStr();
+
+const negatableKeyword = <Name extends string>(name: Name) =>
+    seq(optional(seq(StR('Not'), gap1).intoStr(), ''), StR(name)).intoStr();
+
+const genericKeyword = <Name extends string>(name: Name) =>
+    alt(negatableKeyword(name), genericAssignedKeyword(name));
+
 const annKeywords = (keywordName: Parser<string>) => {
     const keywordValueAnn = seqStr(gap, str('='), gap, value);
     const keywordClause = alt(
@@ -364,21 +396,29 @@ const mXData = seq(
 });
 
 const triggerKeywords = [
-    'CodeMode',
-    'Event',
-    'Final',
-    'Foreach',
-    'Internal',
-    'Language',
-    'NewTable',
-    'OldTable',
-    'Order',
-    'SqlName',
-    'Time',
-    'UpdateColumnList',
+    assignedKeyword('CodeMode', ['code', 'objectgenerator']),
+    assignedKeyword('Event', [
+        'DELETE',
+        'INSERT',
+        'UPDATE',
+        'INSERT/UPDATE',
+        'INSERT/DELETE',
+        'UPDATE/DELETE',
+        'INSERT/UPDATE/DELETE',
+    ]),
+    negatableKeyword('Final'),
+    assignedKeyword('Foreach', ['row', 'row/object', 'statement']),
+    negatableKeyword('Internal'),
+    assignedKeyword('Language', ['objectscript', 'python', 'tsql']),
+    genericAssignedKeyword('NewTable'),
+    genericAssignedKeyword('OldTable'),
+    assignedKeywordP('Order', strWhile1(isNumeral)),
+    genericAssignedKeyword('SqlName'),
+    assignedKeyword('Time', ['AFTER', 'BEFORE']),
+    genericAssignedKeyword('UpdateColumnList'),
 ];
 
-const triggerKeywordList = annKeywords(alt(...triggerKeywords.map(StR)));
+const triggerKeywordList = annKeywords(alt(...triggerKeywords));
 
 const trigger = seq(
     StR('trigger').named('keyword'),
@@ -410,7 +450,7 @@ const mMethodLike = seq(
         return new MethodLikeMember(parts);
     });
 
-const member = alt<Member>(
+const member = alt(
     mParameter,
     mPropertyOrProjection,
     index,
