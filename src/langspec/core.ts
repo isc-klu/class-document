@@ -1,5 +1,3 @@
-import { alt } from './index.js';
-
 export interface SrcLoc {
     line: number;
     char: number;
@@ -231,7 +229,7 @@ export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
 
 export const repeat1 = <T>(x: Parser<T>) => repeat1WithAcc([], x);
 export const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
-    alt(repeat1WithAcc(xs, x), succ(xs));
+    repeat1WithAcc(xs, x).alt2(succ(xs));
 export const repeat1WithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
     x.bind((xv) => repeatWithAcc([...xs, xv], x));
 export function strIf(
