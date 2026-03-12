@@ -1,41 +1,34 @@
 export * from './alt.js';
 export * from './seq.js';
+export type ParserTuple<T extends any[]> = {
+    [K in keyof T]: Parser<T[K]>;
+};
+
+export type AlmostParser = Parser<any> | string;
+
+export type AlmostParserOutput<T> =
+    T extends Parser<infer T> ? T : T extends string ? T : never;
+
+export type ToParser<T> = Parser<AlmostParserOutput<T>>;
+
+export const toParser = <T extends AlmostParser>(
+    from: T,
+): Parser<AlmostParserOutput<T>> =>
+    typeof from === 'string'
+        ? (str(from) as Parser<AlmostParserOutput<T>>)
+        : from;
+export const repeat = <T>(x: Parser<T>) => repeatWithAcc([], x);
+
+export * from './core.js';
 import { seq } from './seq.js';
-import { filter, strN, strWhile, succ, type Parser } from './core.js';
-import { alt, optional } from './alt.js';
-
-export function strIf(
-    n: number,
-    p: (x: string) => boolean = (_) => true,
-): Parser<string> {
-    return filter(strN(n), p);
-}
-
-export function str<T extends string>(x: T): Parser<T> {
-    return strIf(x.length, (y) => y === x) as Parser<T>;
-}
-
-// case-insensitive version
-export function StR<T extends string>(x: T): Parser<string> {
-    return strIf(
-        x.length,
-        (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase(),
-    ) as Parser<T>;
-}
+import { filter, repeatWithAcc, str, strWhile, type Parser } from './core.js';
+import { optional } from './alt.js';
 
 export function strWhile1(
     p: (x: string) => boolean = (_) => true,
 ): Parser<string> {
     return filter(strWhile(p), (x) => x.length > 0);
 }
-
-const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
-    alt(repeat1WithAcc(xs, x), succ(xs));
-const repeat1WithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
-    x.bind((xv) => repeatWithAcc([...xs, xv], x));
-
-export const repeat = <T>(x: Parser<T>) => repeatWithAcc([], x);
-export const repeat1 = <T>(x: Parser<T>) => repeat1WithAcc([], x);
 
 export function repeatSep<I, S>(
     pi: Parser<I>,
@@ -65,26 +58,5 @@ export const isSymbol = (x: string) => /[\p{S}\p{P}]/u.test(x);
 export const isSpace = (x: string) => /[\p{Z}\p{C}]/u.test(x);
 
 export const isChar = (x: string) => x.length === 1;
-export const isButNL = (x: string) => /[^\n]/.test(x);
+export const isNotNL = (x: string) => /[^\n]/.test(x);
 export const isSpaceButNL = (x: string) => /[\t\r ]/.test(x);
-
-export const dbg = <T>(p: Parser<T>, where = 'DBG') =>
-    p.map((x) => {
-        console.log(`${where}: ` + JSON.stringify(x));
-        return x;
-    });
-
-type FunctionOf<T> = (_: T) => never;
-
-type CommonInput<T> = [T] extends [(_: infer I) => never] ? I : never;
-
-type UnionToIntersection<T> = CommonInput<
-    T extends any ? FunctionOf<T> : never
->;
-
-type Intersection<T extends any[]> = UnionToIntersection<T[number]>;
-
-export const compose = <T extends any[]>(
-    p: Parser<T>,
-): Parser<Intersection<T>> =>
-    p.map((xs) => Object.assign({}, ...xs) as Intersection<T>);

@@ -1,15 +1,15 @@
 import {
-    repeat,
-    strIf,
     strWhile1,
     isLetter,
     isNumeral,
     isSymbol,
-    repeat1,
     isSpace,
     alt,
     seq,
 } from './index.js';
+import { strIf } from './core.js';
+import { repeat1 } from './core.js';
+import { repeat } from './index.js';
 import { once, type Parser, rec } from './core.js';
 
 export const doubleQuotedContent = once(

@@ -1,10 +1,9 @@
+import { fail, succ } from './core.js';
 import {
     type AlmostParser,
     type AlmostParserOutput,
-    fail,
-    succ,
     toParser,
-} from './core.js';
+} from './index.js';
 import { type Parser } from './core.js';
 
 export function alt<T extends AlmostParser[]>(...ps: T) {

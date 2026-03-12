@@ -14,21 +14,20 @@ import {
     MPropertyOrProjection,
 } from './classes.js';
 import {
-    strIf,
-    isButNL,
+    isNotNL,
     isNumeral,
     isSpace,
     isSpaceButNL,
-    StR,
     strWhile1,
-    repeat,
-    repeat1,
     repeatSep,
     repeatSepWithStr,
     alt,
     optional,
     seq,
 } from './langspec/index.js';
+import { strIf, StR } from './langspec/core.js';
+import { repeat1 } from './langspec/core.js';
+import { repeat } from './langspec/index.js';
 import { filter } from './langspec/core.js';
 import { strWhile, eof } from './langspec/core.js';
 import { once, type Parser } from './langspec/core.js';
@@ -54,7 +53,7 @@ const lCommentHead = alt('//', '#;');
 const lCommentContent = alt(
     seq(
         strIf(1, (c) => /[^\n\/]/.test(c)),
-        strWhile(isButNL),
+        strWhile(isNotNL),
     ).intoStr(),
     '',
     eof(''),
@@ -72,7 +71,7 @@ const dependencyKeyword = alt(
     StR('include'),
     StR('includegenerator'),
 );
-const dependency = seq(dependencyKeyword, gap1, strWhile1(isButNL)).map(
+const dependency = seq(dependencyKeyword, gap1, strWhile1(isNotNL)).map(
     (parts) => new Dependency(...parts),
 );
 const dependencies = repeat(dependency);
@@ -81,7 +80,7 @@ const dependencies = repeat(dependency);
 const dCommentLine = seq(
     strWhile(isSpaceButNL),
     '///',
-    strWhile(isButNL),
+    strWhile(isNotNL),
     '\n',
 ).intoStr();
 const dComment = repeat(dCommentLine).map((parts) => new Description(parts));

@@ -1,9 +1,9 @@
+import { succ } from './core.js';
 import {
     toParser,
-    succ,
     type AlmostParser,
     type AlmostParserOutput,
-} from './core.js';
+} from './index.js';
 import { type Parser } from './core.js';
 
 export function seq<T extends AlmostParser[]>(

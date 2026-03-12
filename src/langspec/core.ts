@@ -1,4 +1,4 @@
-import { str } from './index.js';
+import { alt } from './index.js';
 
 export interface SrcLoc {
     line: number;
@@ -229,24 +229,26 @@ export function filter<T>(p: Parser<T>, f: (_: T) => boolean): Parser<T> {
     return p.bind((x) => (f(x) ? succ(x) : fail));
 }
 
-export type ParserTuple<T extends any[]> = {
-    [K in keyof T]: Parser<T[K]>;
-};
+export const repeat1 = <T>(x: Parser<T>) => repeat1WithAcc([], x);
+export const repeatWithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
+    alt(repeat1WithAcc(xs, x), succ(xs));
+export const repeat1WithAcc = <T>(xs: T[], x: Parser<T>): Parser<T[]> =>
+    x.bind((xv) => repeatWithAcc([...xs, xv], x));
+export function strIf(
+    n: number,
+    p: (x: string) => boolean = (_) => true,
+): Parser<string> {
+    return filter(strN(n), p);
+}
 
-export type AlmostParser = Parser<any> | string;
+export function str<T extends string>(x: T): Parser<T> {
+    return strIf(x.length, (y) => y === x) as Parser<T>;
+}
+// case-insensitive version
 
-export type AlmostParserOutput<T> =
-    T extends Parser<infer T> ? T : T extends string ? T : never;
-
-export type ToParser<T> = Parser<AlmostParserOutput<T>>;
-
-// type t1 = ToParser<Parser<string>>;
-// type t2 = ToParser<Parser<number>>;
-// type t3 = ToParser<')'>;
-
-export const toParser = <T extends AlmostParser>(
-    from: T,
-): Parser<AlmostParserOutput<T>> =>
-    typeof from === 'string'
-        ? (str(from) as Parser<AlmostParserOutput<T>>)
-        : from;
+export function StR<T extends string>(x: T): Parser<string> {
+    return strIf(
+        x.length,
+        (y) => y.toLocaleLowerCase() === x.toLocaleLowerCase(),
+    ) as Parser<T>;
+}
