@@ -324,20 +324,24 @@ const mTrigger = seq(
     seqDrop13('{', balanced, '}'),
 ).map((parts) => new MTrigger(...parts));
 
-const methodBody = seqDrop13('{', balanced, '}');
+const methodBody = seq(str('{'), balanced, str('}')).takeM();
 const mMethodLike = seq(
-    alt(StR('trigger'), StR('method'), StR('classmethod'), StR('query')),
-    gap1,
-    name,
-    gap,
-    argList,
-    optional(annType),
-    optional(annKeywordsForMethodLike),
-    gap,
-    methodBody,
-).map((parts) => {
-    return new MethodLikeMember(...parts);
-});
+    alt(StR('trigger'), StR('method'), StR('classmethod'), StR('query')).named(
+        'keyword',
+    ),
+    gap1.named('gapKeywordName'),
+    name.named('name'),
+    gap.named('gapNameParen'),
+    argList.named('parameters'),
+    optional(annType).named('typeAnn'),
+    optional(annKeywordsForMethodLike).named('keywords'),
+    gap.named('gapNameEnd'),
+    methodBody.named('content'),
+)
+    .intoObj()
+    .map((parts) => {
+        return new MethodLikeMember(parts);
+    });
 
 const member = alt<Member>(
     mParameter,

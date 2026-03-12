@@ -73,9 +73,9 @@ export type ResultSet<T> = IteratorObject<Result<T>, void>;
 
 type DropFst<T extends any[]> = T extends [infer _, ...infer R] ? R : never;
 type DropLst<T extends any[]> = T extends [...infer R, infer _] ? R : never;
-type DropFstLst<T extends any[]> = T extends [infer _, ...infer R, infer _]
-    ? R
-    : never;
+type DropFL<T> = T extends [infer _, ...infer R, infer _] ? R : never;
+
+type TakeM<T> = T extends [infer _, infer R, infer _] ? R : never;
 
 type FunctionOf<T> = (_: T) => never;
 
@@ -85,7 +85,11 @@ type UnionToIntersection<T> = CommonInput<
     T extends any ? FunctionOf<T> : never
 >;
 
-type Intersection<T> = T extends any[] ? UnionToIntersection<T[number]> : never;
+type Condense<T> = Pick<T, keyof T>;
+
+type Intersection<T> = Condense<
+    T extends any[] ? UnionToIntersection<T[number]> : never
+>;
 
 export const compose = <T extends any[]>(
     p: Parser<T>,
@@ -136,8 +140,11 @@ export class Parser<A> {
             }
         });
     }
-    public named<K extends PropertyKey>(k: K): Parser<Record<K, A>> {
+    public named<K extends PropertyKey>(k: K): Parser<{ [P in K]: A }> {
         return this.map((v) => ({ [k]: v }) as Record<K, A>);
+    }
+    public ignored<K extends PropertyKey>(): Parser<{}> {
+        return this.map((v) => ({}));
     }
     public intoObj(): Parser<A extends any[] ? Intersection<A> : never> {
         return this.map((xs) => {
@@ -150,12 +157,19 @@ export class Parser<A> {
             }
         });
     }
-    public drop13(): Parser<
-        A extends [infer _1, infer T2, infer _3] ? T2 : never
-    > {
+    public takeM(): Parser<TakeM<A>> {
         return this.map((xs) => {
             if (Array.isArray(xs) && xs.length === 3) {
                 return xs[1];
+            } else {
+                throw new Error('The input is not an array');
+            }
+        });
+    }
+    public dropFL(): Parser<DropFL<A>> {
+        return this.map((xs) => {
+            if (Array.isArray(xs) && xs.length >= 2) {
+                return xs.slice(1, xs.length - 1) as DropFL<A>;
             } else {
                 throw new Error('The input is not an array');
             }

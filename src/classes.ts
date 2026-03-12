@@ -284,17 +284,17 @@ export class MethodLikeMember extends Member {
     gapNameParen: string;
     parameters: [string, string, string][];
     typeAnn: string | null;
-    constructor(
-        keyword: string,
-        gapKeywordName: string,
-        name: string,
-        gapNameParen: string,
-        parameters: [string, string, string][],
-        typeAnn: string | null,
-        keywords: null | AnnKeywordList,
-        gapNameEnd: string,
-        content: string,
-    ) {
+    constructor({
+        keyword,
+        gapKeywordName,
+        name,
+        gapNameParen,
+        parameters,
+        typeAnn,
+        keywords,
+        gapNameEnd,
+        content,
+    }: any) {
         super(keyword, gapKeywordName, name, gapNameEnd);
         this.keywords = keywords;
         this.gapNameParen = gapNameParen;
